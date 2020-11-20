@@ -1,6 +1,8 @@
+import sys
+import os
 import tables
-import qtl_fdr_utilities
 import numpy as np
+import qtl_fdr_utilities
 
 #V0.1.1
 
@@ -47,8 +49,8 @@ class hdf5_writer:
                 row.update()
         table.flush()
         return [alpha_para, beta_para]
-        
- 
+
+
 class text_writer:
 
     def __init__(self,output_filename):
@@ -79,7 +81,7 @@ class hdf5_permutations_writer:
 
     def add_permutation_results_df(self,permutation_results_df,feature_id):
         '''Takes as input permutation_results_df and feature_id.
-        permutation_results_df must contain a "snp_id" column, and 
+        permutation_results_df must contain a "snp_id" column, and
         columns labelled ""permutation_1","permutation_2",...,"permutation_n",
         where n=the number of permutations specified when initialising the
         hdf5_permutations_writer.'''
@@ -100,7 +102,7 @@ class hdf5_permutations_writer:
             permutation_result.append()
         table.flush()
 
-        
+
 class QTL_result_hdf5(tables.IsDescription):
     snp_id  = tables.StringCol(100)   # 100-character String
     p_value = tables.Float64Col()    # double (double-precision)
