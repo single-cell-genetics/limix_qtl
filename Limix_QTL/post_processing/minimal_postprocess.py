@@ -15,28 +15,31 @@ def minimal_qtl_processing(QTL_Dir, OutputDir, writeToOneFile=True, compressed =
         output_file='top_qtl_results_'
     else:
         output_file='qtl_results_'
-    
-    
+
+
     h5FilesToProcess = (glob.glob(QTL_Dir+"/qtl_*.h5"))
-    
+
+    #iterate over h5files
     #print(h5FilesToProcess)
     #print(os.path.dirname(h5FilesToProcess[1]))
+
     for file in h5FilesToProcess :
+        print(file)
         partTmp = os.path.basename(file).replace(qtl_results_file,"").replace(".h5","")
         if(debugMode):
             print(partTmp)
-        if(writeToOneFile): 
+        if(writeToOneFile):
             outputFile = OutputDir+output_file+"all.txt"
         else:
             outputFile = OutputDir+output_file+partTmp+".txt"
-        
+
         #print(outputFile)
         if(((os.path.isfile(outputFile) or os.path.isfile(outputFile+".gz")) and not overWrite) and not writeToOneFile):
             #print("Skipping: "+partTmp)
             continue
         #else :
             #print('Processing: '+partTmp)
-        #print(partTmp)
+        print(partTmp)
         if not os.path.isfile(QTL_Dir+"/"+snp_metadata_file+partTmp+".txt"):
             print("Skipping: " +partTmp + " not all necessary files are present.")
             continue
@@ -51,33 +54,33 @@ def minimal_qtl_processing(QTL_Dir, OutputDir, writeToOneFile=True, compressed =
         except:
             print("Issue in features or snp annotation.\n Skipping: "+partTmp)
             continue
-        
+
         ffea = ffea.rename(index=str, columns={"chromosome": "feature_chromosome", "start": "feature_start", "end": "feature_end"})
         fsnp = fsnp.rename(index=str, columns={"chromosome": "snp_chromosome", "position": "snp_position"})
-        #pdb.set_trace()
+
+
         frez=h5py.File(file,'r')
         frezkeys= np.array([k.replace('_i_','') for k in list(frez.keys())])
-        
+
         data={}
         for key in ['feature_id','snp_id','p_value','beta','beta_se','empirical_feature_p_value']:
             data[key]=np.zeros(len(np.unique(list(frezkeys))),dtype='object')+np.nan
-        
+
         for ifea,report_feature in enumerate(np.unique(list(frezkeys))):
+            print(report_feature)
             for key in ['snp_id','p_value','beta','beta_se','empirical_feature_p_value']:
                 temp = np.array(frez[report_feature][key])
                 data[key][ifea]=np.hstack(temp).astype('U')
             data['feature_id'][ifea]=np.hstack(np.repeat(report_feature,len(frez[report_feature][key])))
-        #pdb.set_trace()
+
         for key in data.keys():
             data[key]=np.hstack(data[key])
-        
+
         temp=pd.DataFrame(data)
-        #print(temp.head())
-        
+
         temp = pd.merge(temp, ffea, on='feature_id', how='left')
-        #print(temp.head())
-        
-        #pdb.set_trace()
+
+
         if(len(glob.glob(QTL_Dir+'snp_qc_metrics_naContaining_feature_*.txt'))>0):
             ##Here we need to check, we can based on the output of glob do this quicker.
             temp2 = pd.DataFrame(columns=temp.columns)
@@ -96,21 +99,20 @@ def minimal_qtl_processing(QTL_Dir, OutputDir, writeToOneFile=True, compressed =
                 data[key]=np.zeros(len(np.unique(list(frezkeys))),dtype='object')+np.nan
             temp = temp2
             temp2 = None
-        else : 
+        else :
             temp = pd.merge(temp, fsnp, on='snp_id', how='left')
-        
-        #pdb.set_trace()
+
         #print(temp.head())
         temp['empirical_feature_p_value'] = temp['empirical_feature_p_value'].astype(float)
         temp['p_value'] = temp['p_value'].astype(float)
         if(minimalPValue<1):
             temp=pd.DataFrame(data).iloc[data['p_value'].astype(float)<minimalPValue]
-        
+
         if(minimalFeaturePValue<1):
             temp=pd.DataFrame(data).iloc[data['empirical_feature_p_value'].astype(float)<minimalFeaturePValue]
-        
+
         temp = temp.sort_values(by =['empirical_feature_p_value',"p_value"], ascending=[True,True])
-        
+
         if topMode:
             temp = temp.groupby(temp['feature_id']).first()
             temp['feature_id'] = temp.index
@@ -149,4 +151,3 @@ if __name__=='__main__':
     debugMode = args.debug
 
     minimal_qtl_processing(inputDir, outputDir, writeToOneFile, compressed, overWrite, float(minimalPValue), float(minimalFeaturePValue),topMode, debugMode)
-

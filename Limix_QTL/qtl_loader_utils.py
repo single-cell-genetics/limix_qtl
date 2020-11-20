@@ -20,12 +20,22 @@ def get_snp_df(snps_filename):
         snp_filter_df = None
     return snp_filter_df
 
-def get_kinship_df(kinship_filename):
+def get_randeff_df(randomeff_filename):
+    kinship_filename = False
+    readdepth_filename = False
+    if ',' in randomeff_filename :
+        kinship_filename, readdepth_filename = randomeff_filename.split(",")
+    else :
+        kinship_filename = randomeff_filename
     if kinship_filename:
         kinship_df = pd.read_csv(kinship_filename,sep='\t',index_col=0)
     else:
         kinship_df = None
-    return kinship_df
+    if readdepth_filename:
+        readdepth_df = pd.read_csv(readdepth_filename,sep='\t',index_col=0)
+    else:
+        readdepth_df = None
+    return kinship_df,readdepth_df
 
 def get_samplemapping_df(sample_mapping_filename,sample_labels,key_from):
     assert(key_from in ['iid','sample'])
@@ -81,3 +91,10 @@ def get_grs_subset_df(grs_filename, relSnps):
         if any(chunk.index.isin(relSnps)):
             risk_df = pd.concat([risk_df,chunk.reindex(labels=relSnps,axis ='index')])
     return risk_df
+
+def get_top_qtl_results(top_qtl_results_filename):
+    if top_qtl_results_filename:
+        top_qtl_results_df = pd.read_csv(top_qtl_results_filename,sep='\t',index_col=0)
+    else:
+        top_qtl_results_df = None
+    return top_qtl_results_df
