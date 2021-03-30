@@ -886,17 +886,20 @@ def regressOut(Y, X):
     Xd = la.pinv(X)
     Y_out = Y-X.dot(Xd.dot(Y))
     return Y_out
+    
 
-def rhoTest(best, phenotype, cov_matrix, Sigma_qs, mixed, lastMove):
+
+##Smart optimization.
+def rhoTest(best, phenotype, cov_matrix, Sigma_qs, mixed, lastMove, rhoArray, verbose = False):
     if best is None:
         # initialize rho opitimization
         best = {}
-        best["rho_left"] = 0.4
-        best["rho_mid"] = 0.5
-        best["rho_right"] = 0.6
-        lmm_left = LMM(phenotype, cov_matrix, Sigma_qs[best["rho_left"]])
-        lmm_mid = LMM(phenotype, cov_matrix, Sigma_qs[best["rho_mid"]])
-        lmm_right = LMM(phenotype, cov_matrix, Sigma_qs[best["rho_right"]])
+        best["rho_mid"] = int(np.ceil(len(rhoArray)/2))
+        best["rho_left"] = best["rho_mid"]-1
+        best["rho_right"] = best["rho_mid"]+1
+        lmm_left = LMM(phenotype, cov_matrix, Sigma_qs[rhoArray[best["rho_left"]]])
+        lmm_mid = LMM(phenotype, cov_matrix, Sigma_qs[rhoArray[best["rho_mid"]]])
+        lmm_right = LMM(phenotype, cov_matrix, Sigma_qs[rhoArray[best["rho_right"]]])
         if not mixed:
             lmm_left.delta = 1
             lmm_left.fix('delta')
@@ -913,29 +916,32 @@ def rhoTest(best, phenotype, cov_matrix, Sigma_qs, mixed, lastMove):
         best["lml_mid"] = lmm_mid.lml()
         best["lmm_right"] = lmm_right
         best["lml_right"] = lmm_right.lml()
+        if verbose:
+            print(rhoArray[best["rho_left"]])
+            print(best["lml_left"])
+            print(rhoArray[best["rho_mid"]])
+            print(best["lml_mid"])
+            print(rhoArray[best["rho_right"]])
+            print(best["lml_right"])
     move=None
     ##Bigger is better lml
-    if(best["rho_left"] == 0):
+    if(best["rho_left"] == 0 or best["rho_right"] == (len(rhoArray)-1)):
         ##Check what is the best of the three.
-        return(returnBestRho(best))
-    elif(best["rho_right"] == 1):
-        ##Check what is the best of the three.
-        return(returnBestRho(best))
-        mixingParameters = {}
-    elif best["lml_left"] >= best["lml_mid"] and best["lml_mid"] > best["lml_right"] :
+        return(returnBestRho(best,rhoArray))
+    elif best["lml_left"] >= best["lml_mid"] and best["lml_left"] > best["lml_right"] :
         #Need to do a step to the left.
         move = "left"
-        ##Recycle.
+        ##Recycle old fits.
         best["rho_right"] = best["rho_mid"]
-        best["rho_mid"] = best["rho_left"]
         best["lmm_right"] = best["lmm_mid"]
+        best["lml_right"] = best["lml_mid"]
+        best["rho_mid"] = best["rho_left"]
         best["lml_mid"] = best["lml_left"]
-        best["lmm_right"] = best["lmm_right"]
-        best["lml_mid"] = best["lml_mid"]
+        best["lmm_mid"] = best["lmm_left"]
         
         ##Compute new.
-        best["rho_left"] = np.round(best["rho_left"]-0.1,1)
-        lmm_left = LMM(phenotype, cov_matrix, Sigma_qs[best["rho_left"]])
+        best["rho_left"] = best["rho_left"]-1
+        lmm_left = LMM(phenotype, cov_matrix, Sigma_qs[rhoArray[best["rho_left"]]])
         if not mixed:
             lmm_left.delta = 1
             lmm_left.fix('delta')
@@ -943,130 +949,175 @@ def rhoTest(best, phenotype, cov_matrix, Sigma_qs, mixed, lastMove):
         best["lmm_left"] = lmm_left
         best["lml_left"] = lmm_left.lml()
         
-    elif best["lml_left"] < best["lml_mid"] and best["lml_mid"] <= best["lml_right"] :
+    elif best["lml_right"] >= best["lml_mid"] and  best["lml_right"] > best["lml_left"] :
         #Need to do a step to the right.
         move = "right"
         ##Recycle.
         best["rho_left"] = best["rho_mid"]
-        best["rho_mid"] = best["rho_right"]
         best["lmm_left"] = best["lmm_mid"]
         best["lml_left"] = best["lml_mid"]
+        best["rho_mid"] = best["rho_right"]
         best["lmm_mid"] = best["lmm_right"]
         best["lml_mid"] = best["lml_right"]
         
         ##Compute new.
-        best["rho_right"] = np.round(best["rho_right"]+0.1,1)
-        lmm_right = LMM(phenotype, cov_matrix, Sigma_qs[best["rho_right"]])
+        best["rho_right"] = best["rho_right"]+1
+        lmm_right = LMM(phenotype, cov_matrix, Sigma_qs[rhoArray[best["rho_right"]]])
         if not mixed:
             lmm_right.delta = 1
             lmm_right.fix('delta')
         lmm_right.fit(verbose=False)
         best["lmm_right"] = lmm_right
         best["lml_right"] = lmm_right.lml()
-    elif best["rho_left"]>0.1 and best["rho_right"]<0.9 and ((best["lml_left"] == best["lml_mid"] and best["lml_mid"] == best["lml_right"]) or (best["lml_left"] > best["lml_mid"] and best["lml_mid"] < best["lml_right"]))  :
-        ##Special case if we are stuck somewhere on a "flat" spot.
-        ##Either all three are equal (First in or)
-        ##Or mid is lower than both (Second in the or)
-        #Fit one to the right.
-        lmm_right = LMM(phenotype, cov_matrix, Sigma_qs[np.round(best["rho_right"]+0.1,1)])
-        lmm_right_e = LMM(phenotype, cov_matrix, Sigma_qs[np.round(1,1)])
+    #Here we start dealing with the special cases.
+    elif ((best["lml_left"] == best["lml_mid"] and best["lml_mid"] == best["lml_right"]) or (best["lml_left"] == best["lml_right"] and best["lml_mid"] < best["lml_right"])):
+        ##We are not at an extreme yet. And might nog be done optimizing.
+        ##We are either at a flat spot (condition 1)
+        ##Or we are symetrically surounding a local minima (moving in either directions is better (and the same))
+        
+        ## Solution fit extra values around it, to see if we can get away from the flatspot / minima.
+        # Fit extra on the right side.
+        lmm_right = LMM(phenotype, cov_matrix, Sigma_qs[rhoArray[best["rho_right"]+1]])
         if not mixed:
             lmm_right.delta = 1
             lmm_right.fix('delta')
-            lmm_right_e.delta = 1
-            lmm_right_e.fix('delta')
         lmm_right.fit(verbose=False)
-        lmm_right_e.fit(verbose=False)
         #Fit one to the left
-        lmm_left = LMM(phenotype, cov_matrix, Sigma_qs[np.round(best["rho_left"]-0.1,1)])
-        lmm_left_e = LMM(phenotype, cov_matrix, Sigma_qs[np.round(0,1)])
+        lmm_left = LMM(phenotype, cov_matrix, Sigma_qs[rhoArray[best["rho_left"]-1]])
         if not mixed:
             lmm_left.delta = 1
             lmm_left.fix('delta')
-            lmm_left_e.delta = 1
-            lmm_left_e.fix('delta')
         lmm_left.fit(verbose=False)
-        lmm_left_e.fit(verbose=False)
+        #Determine which way to step.
         
-        if (lmm_left.lml() >= best["lml_left"] and lmm_left.lml() > lmm_right.lml()) or (lmm_left_e.lml() >= best["lml_mid"] and lmm_left_e.lml() > lmm_right_e.lml()) :
+        if (lmm_left.lml() > lmm_right.lml()) :
             #Left is the way to go. Furhter left is larger than mid and larger than further right.
             move = "left"
             #moving to the left.
             best["rho_right"] = best["rho_mid"]
-            best["rho_mid"] = best["rho_left"]
             best["lmm_right"] = best["lmm_mid"]
+            best["lml_right"] = best["lml_mid"]
+            best["rho_mid"] = best["rho_left"]
+            best["lmm_mid"] = best["lmm_left"]
             best["lml_mid"] = best["lml_left"]
-            best["lmm_right"] = best["lmm_right"]
-            best["lml_mid"] = best["lml_mid"]
+            
             ##Geting already computed new values.
-            best["rho_left"] = np.round(best["rho_left"]-0.1,1)
+            best["rho_left"] = best["rho_left"]-1
             best["lmm_left"] = lmm_left
             best["lml_left"] = lmm_left.lml()
-        elif lmm_right.lml() >= best["lml_right"] and lmm_left.lml() < lmm_right.lml() or (lmm_right_e.lml() >= best["lml_mid"] and lmm_left_e.lml() < lmm_right_e.lml()) :
+        elif (lmm_right.lml() > lmm_left.lml()) :
             #Right is the way to go. Furhter right is larger than mid and larger than further left.
             move = "right"
             #moving to the right.
             best["rho_left"] = best["rho_mid"]
-            best["rho_mid"] = best["rho_right"]
             best["lmm_left"] = best["lmm_mid"]
             best["lml_left"] = best["lml_mid"]
+            best["rho_mid"] = best["rho_right"]
             best["lmm_mid"] = best["lmm_right"]
             best["lml_mid"] = best["lml_right"]
             ##Geting already computed new values.
-            best["rho_right"] = np.round(best["rho_right"]+0.1,1)
+            best["rho_right"] = best["rho_right"]+1
             best["lmm_right"] = lmm_right
             best["lml_right"] = lmm_right.lml()
-        elif lmm_left_e.lml() == lmm_right_e.lml() :
-            ##Complete plateu, fixing to mid point.
-            best["rho_left"] = best["rho_mid"]
-            best["lmm_left"] = best["lmm_mid"]
-            best["lml_left"] = best["lml_mid"]
-            best["rho_right"] = best["rho_mid"]
-            best["lmm_right"] = best["lmm_mid"]
-            best["lml_right"] = best["lml_mid"]
-            
         else:
-            ##Mid might be a minima or plateau and both move in the same steps up or stay flat.
-            ##Or all 5 values are the same than (##not yet##) we just pick the mid from the original three.
-            return(returnBestRho(best))
+            ##Mid might be a minima or plateau and both move in the same lml value or stay flat.
+            ##Defaulting back to testing all values.
+            return(rhoTestBF(best, phenotype, cov_matrix, Sigma_qs, mixed, lastMove, rhoArray, verbose))
     else:
         ##We are already surrounding an optimum. (might be local).
         ##Check what is the best of the three.
-        #
-        return(returnBestRho(best))
+        return(returnBestRho(best, rhoArray))
+    
     if(move=="left" and lastMove=="right") or (move=="right" and lastMove=="left"):
-        #moving back and fort, make sure we get out of this.
-        return(returnBestRho(best))
-    return rhoTest(best, phenotype, cov_matrix, Sigma_qs, mixed, move)
+        ##Moving back and forth, need to check global optimal (in range). 
+        return(rhoTestBF(best, phenotype, cov_matrix, Sigma_qs, mixed, lastMove, rhoArray, verbose))
+        
+    if verbose:
+        print(rhoArray[best["rho_left"]])
+        print(best["lml_left"])
+        print(rhoArray[best["rho_mid"]])
+        print(best["lml_mid"])
+        print(rhoArray[best["rho_right"]])
+        print(best["lml_right"])
+        print(move)
+        print()
+    
+    return rhoTest(best, phenotype, cov_matrix, Sigma_qs, mixed, move, rhoArray, verbose)
 
-def returnBestRho(best):
+##rho brute force.
+def rhoTestBF(best, phenotype, cov_matrix, Sigma_qs, mixed, lastMove, rhoArray, verbose = False):
+    maxLml = -sys.float_info.max
+    mixingParameters = {}
+    bestLmm = None
+    loc = []
+    posBuffer = 0
+    
+    for i in rhoArray:
+        lmm = LMM(phenotype, cov_matrix, Sigma_qs[i])
+        if not mixed:
+            lmm.delta = 1
+            lmm.fix('delta')
+        lmm.fit(verbose=False)
+        if verbose:
+            print(i)
+            print(lmm.lml())
+        
+        if(lmm.lml()>maxLml):
+            maxLml = lmm.lml()
+            loc = [posBuffer]
+            bestLmm = lmm
+        elif(lmm.lml()==maxLml):
+            loc.append(posBuffer)
+        posBuffer +=1
+    
+    if(len(loc)==1):
+        #We have one optimum.
+        print(rhoArray[loc[0]])
+        mixingParameters["rho"] = rhoArray[loc[0]]
+        mixingParameters["lmm"] =  bestLmm
+    else :
+        #pdb.set_trace()
+        #There are multiple best values, picking the one closest to the mid-point.
+        minPoint = (np.ceil(len(rhoArray)/2)-1)
+        locArray = np.abs(np.asarray(loc)-4)
+        i = rhoArray[loc[np.random.choice(np.where(locArray==min(locArray))[0])]]
+        lmm = LMM(phenotype, cov_matrix, Sigma_qs[i])
+        lmm.fit(verbose=False)
+        if verbose:
+            print("Picked value closest to mid point.")
+            print(i)
+        mixingParameters["rho"] = i
+        mixingParameters["lmm"] =  lmm
+    return(mixingParameters)
+
+def returnBestRho(best, rhoArray):
     mixingParameters = {}
     if (best["lml_left"] > best["lml_mid"] and best["lml_left"] > best["lml_right"]):
         #Left is best.
-        mixingParameters["rho"] = best["rho_left"]
+        mixingParameters["rho"] = rhoArray[best["rho_left"]]
         mixingParameters["lmm"] =  best["lmm_left"]
     elif (best["lml_left"] < best["lml_right"] and best["lml_mid"] < best["lml_right"]):
         #Right is best.
-        mixingParameters["rho"] = best["rho_right"]
+        mixingParameters["rho"] = rhoArray[best["rho_right"]]
         mixingParameters["lmm"] = best["lmm_right"]
     elif (best["lml_left"] <= best["lml_mid"] and best["lml_mid"] >= best["lml_right"]):
         #midle is best, or all are equal.
-        mixingParameters["rho"] = best["rho_mid"]
+        mixingParameters["rho"] = rhoArray[best["rho_mid"]]
         mixingParameters["lmm"] = best["lmm_mid"]
     elif (best["lml_left"] == best["lml_right"] and best["lml_mid"] < best["lml_right"] and best["lml_mid"] < best["lml_left"]):
         #This is the unlikely case that the middle is a minima and steps away from this behave the same.
         print("Stuck in minima, and can't get out of it easily. ")
         print("(Continuning with the mid point: "+str(best["rho_mid"])+")")
-        mixingParameters["rho"] = best["rho_mid"]
+        mixingParameters["rho"] = rhoArray[best["rho_mid"]]
         mixingParameters["lmm"] = best["lmm_mid"]
     else:
-        print(best["rho_left"])
+        print(rhoArray[best["rho_left"]])
         print(best["lml_left"])
         print("")
-        print(best["rho_mid"])
+        print(rhoArray[best["rho_mid"]])
         print(best["lml_mid"])
         print("")
-        print(best["rho_right"])
+        print(rhoArray[best["rho_right"]])
         print(best["lml_right"])
         print("")
         print("Broken logic")
