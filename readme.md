@@ -1,4 +1,4 @@
-# QTL mapping pipeline information
+# LIMIX QTL mapping information
 This software allows for QTL mapping using linear mixed model and interaction analysis.
 Additionally linear model and correlation based version of the pipeline, as well as PRS / eQTS implementations are available.
 
