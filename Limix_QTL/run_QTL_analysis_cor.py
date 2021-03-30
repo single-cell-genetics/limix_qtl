@@ -10,6 +10,7 @@ import sys
 ##External packages.
 import pandas as pd
 import numpy as np
+import scipy as sp
 import math
 from sklearn.preprocessing import Imputer
 from numpy_sugar.linalg import economic_qs, economic_svd
@@ -25,6 +26,8 @@ from qtl_snp_qc import do_snp_qc
 import time
 #V0.1.4
 
+###Warning this is a naive implementation! If used routinely the correlation function should be optimized.
+
 def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, output_dir, window_size=250000,
                      min_maf=0.05, min_hwe_P=0.001, min_call_rate=None, blocksize=1000, cis_mode=True,
                      skipAutosomeFiltering = False, gaussianize_method=None, minimum_test_samples= 10,
@@ -32,11 +35,15 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                      relatedness_score=0.95, feature_variant_covariate_filename = None, snps_filename=None, feature_filename=None,
                      snp_feature_filename=None, genetic_range='all', covariates_filename=None, randomeff_filename=None,
                      sample_mapping_filename=None, extended_anno_filename=None, regressCovariatesUpfront = False, debugger=False):
-
-
+    #Manual flag to set pearson (True), spearman (False). TODO add rank as an option to gaussnorm.
+    pearson=True
+    
+    if regressCovariatesUpfront is not None:
+        #This implementation can only handle regression before the association test (correlation).
+        regressCovariatesUpfront= True
     tot_time = 0
     idx = 0
-
+    
     print(relatedness_score)
 
     fill_NaN = Imputer(missing_values=np.nan, strategy='mean', axis=0, copy=False)
@@ -110,26 +117,10 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
     snpQcInfoMain = None
     random_eff_param = []
     log = {}
+    rho1 = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]
     Sigma = {}
     Sigma_qs = {}
     randomeff_mix = False
-    
-    minRho = 0
-    maxRho = 1
-    stepSize=0.1
-    #stepSize=0.05
-    
-    precission =  (len(str(stepSize))-2)
-    rho1 = np.round(np.arange(minRho,np.round(maxRho+stepSize,precission),stepSize),precission)
-    
-    #Here we check if there is a middle value in rho1 to start from.
-    if len(rho1)%2==0 :
-        rho2 = [None] * (len(rho1)+1)
-        halfValue = int(np.round(len(rho1)/2,0))
-        rho2[0:halfValue+1] = rho1[0:halfValue+1]
-        rho2[(halfValue+2):(len(rho1)+1)] = rho1[(halfValue+1):(len(rho1)+1)]
-        rho2[(halfValue+1)] = ((rho1[halfValue] + rho1[halfValue+1])/2)
-        rho1 = np.round(rho2,precission)
     
     #############################################################################################################################################################
     # Per feature LMM fitting
@@ -385,77 +376,52 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
 
             ###########################################################################################################################################################
             # force normal distribution of expression values
-            phenotype = utils.force_normal_distribution(phenotype_ds.values,method=gaussianize_method) if gaussianize_method is not None else phenotype_ds.values
+            phenotype_ds = pd.Series(data= utils.force_normal_distribution(phenotype_ds.values,method=gaussianize_method) if gaussianize_method is not None else phenotype_ds.values,index=phenotype_ds.index,name=phenotype_ds.name)
             ###########################################################################################################################################################
-
-            #Prepare LMM
-            phenotype = phenotype.astype(float)
-
-
-            ##Mixed and test.
-            ##This is a future change so we don't need to decompose the COVs every time.
-            ##Like QS this needs to happen when genetic unique individuals is the same.
-            #svd_cov = economic_svd(cov_matrix)
-            #lmm = LMM(phenotype, cov_matrix, QS, SVD=svd_cov)
-            #These steps need to happen only once per phenotype.
-            #print(QS)
-            
-            ##########################################################################################################################################################
-            # Computing Null Model 
-            if debugger:
-                fun_start = time.time()
-            if randomeff_mix:
-                mixingParameters = utils.rhoTest(best=None, phenotype = phenotype, cov_matrix=cov_matrix, Sigma_qs=Sigma_qs, mixed=mixed, lastMove=None, rhoArray = rho1, verbose = False)
-                #mixingParameters = utils.rhoTestBF(best=None, phenotype = phenotype, cov_matrix=cov_matrix, Sigma_qs=Sigma_qs, mixed=mixed, lastMove=None, rhoArray = rho1, verbose = False)
-                
-                lmm = mixingParameters["lmm"]
-                feature_best_rho = mixingParameters["rho"]
-                log[(feature_id)].append(feature_best_rho)
-                
-                if debugger:
-                    if mixingParameters["rho"]!=0:
-                        print("Random effect has influence, mixing parameter: "+str(feature_best_rho))
-                    else :
-                        print("Only kinship has effect.")
-            else:
-                lmm = LMM(phenotype, cov_matrix, QS)
-                if not mixed:
-                    lmm.delta = 1
-                    lmm.fix('delta')
-                lmm.fit(verbose=False)
-            if debugger:
-                fun_end = time.time()
-                print(" Computing Null model took {}".format(fun_end-fun_start))
-            ##########################################################################################################################################################
             
             ##########################################################################################################################################################
             # Regressing up covariates
             if debugger:
                 fun_start = time.time()
             if regressCovariatesUpfront:
-                phenotype_corrected = phenotype-cov_matrix[:,1:].dot(lmm.beta[1:])
-                cov_matrix_corrected = cov_matrix[:,0]
+                phenotype = phenotype_ds.values
+                ##Using LMM/LM to regress covariates up front. 
+                # Computing Null Model 
+                if debugger:
+                    fun_start = time.time()
                 if randomeff_mix:
-                    lmm = LMM(phenotype_corrected, cov_matrix_corrected, Sigma_qs[mixingParameters["rho"]])
+                    mixingParameters = utils.rhoTest(None, phenotype,cov_matrix,Sigma_qs,mixed, None)
+                    lmm = mixingParameters["lmm"]
+                    log[(feature_id)].append(mixingParameters["rho"])
+                    feature_best_rho = mixingParameters["rho"]
+                
+                    if mixingParameters["rho"]!=0:
+                        print("Random effect has influence, mixing parameter: "+str(mixingParameters["rho"]))
+                    else :
+                        print("Only kinship has effect.")
+                    
                 else:
-                    lmm = LMM(phenotype_corrected, cov_matrix_corrected, QS)
-                lmm.fit(verbose=False)
+                    lmm = LMM(phenotype, cov_matrix, QS)
+                    if not mixed:
+                         lmm.delta = 1
+                         lmm.fix('delta')
+                    lmm.fit(verbose=False)
+                if debugger:
+                    fun_end = time.time()
+                    print(" Computing Null model took {}".format(fun_end-fun_start))
+                #Replace phenotype with corrected phenotype:
+                phenotype_ds = pd.Series(data= (phenotype-cov_matrix[:,1:].dot(lmm.beta[1:])),index=phenotype_ds.index,name=phenotype_ds.name)
+            
             if debugger:
                 fun_end = time.time()
                 print(" Regressing Covariates took {}".format(fun_end-fun_start))
             ##########################################################################################################################################################
-
             if debugger:
                 fun_start = time.time()
-            null_lml = lmm.lml()
-            flmm = lmm.get_fast_scanner()
-            countChunker = 0
-            if debugger:
-                fun_end = time.time()
-                print(" Start scanning took {}".format(fun_end-fun_start))
-
             ##########################################################################################################################################################
             # Fast scanning - iterate according to a blocksize 
+            countChunker = 0
+            
             for snpGroup in utils.chunker(snpQuery, blocksize):
                 countChunker=countChunker+1
                 #print(countChunker)
@@ -573,53 +539,64 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                 # SCANNING
                 if debugger:
                     fun_start = time.time()
-                G = snp_df.values
-                G = G.astype(float)
-                G_index = snp_df.columns
-
-                alt_lmls, effsizes = flmm.fast_scan(G, verbose=False)
-                var_pvalues = lrt_pvalues(null_lml, alt_lmls)
-                var_effsizes_se = effsizes_se(effsizes, var_pvalues)
-
+                
+                rho = [None] * snp_df.shape[1]
+                pVal = [None] * snp_df.shape[1]
+                if pearson: 
+                    for snpPos in range(0, snp_df.shape[1]) :
+                        rho[snpPos], pVal[snpPos] = sp.stats.pearsonr(snp_df.values[:,snpPos], phenotype_ds.values)
+                else: 
+                    for snpPos in range(0, snp_df.shape[1]) :
+                        rho[snpPos], pVal[snpPos] = sp.stats.spearmanr(snp_df.values[:,snpPos], phenotype_ds.values)
+                
                 if debugger:
                     fun_end = time.time()
                     print(" Actual scanning took {}".format(fun_end-fun_start))
                 #########################################################################################################################################################
-
+                
                 #add these results to qtl_results
-                temp_df = pd.DataFrame(index = range(len(G_index)),columns=['feature_id','snp_id','p_value','beta','beta_se','empirical_feature_p_value'])
-                temp_df['snp_id'] = G_index
+                temp_df = pd.DataFrame(index = range(len(snp_df.columns)),columns=['feature_id','snp_id','p_value','beta','beta_se','empirical_feature_p_value'])
+                temp_df['snp_id'] = snp_df.columns
                 temp_df['feature_id'] = feature_id.replace("/","-")
-                temp_df['beta'] = np.asarray(effsizes)
-                temp_df['p_value'] = np.asarray(var_pvalues)
-                temp_df['beta_se'] = np.asarray(var_effsizes_se)
+                temp_df['beta'] = np.asarray(rho)
+                temp_df['p_value'] = np.asarray(pVal)
+                
                 #insert default dummy value
+                temp_df['beta_se'] = None
                 temp_df['empirical_feature_p_value'] = -1.0
-
+                
                 ##########################################################################################################################################################
                 # SCANNING
                 if debugger:
                     fun_start = time.time()
                 if(n_perm!=0):
                     pValueBuffer = []
-                    totalSnpsToBeTested = (G.shape[1]*n_perm)
+                    totalSnpsToBeTested = (snp_df.shape[1]*n_perm)
                     permutationStepSize = np.floor(n_perm/(totalSnpsToBeTested/blocksize))
                     if(permutationStepSize>n_perm):
                         permutationStepSize=n_perm
                     elif(permutationStepSize<1):
                         permutationStepSize=1
-
+                    
                     if(write_permutations):
-                        perm_df = pd.DataFrame(index = range(len(G_index)),columns=['snp_id'] + ['permutation_'+str(x) for x in range(n_perm)])
-                        perm_df['snp_id'] = G_index
+                        print("Not supported.")
+                        #perm_df = pd.DataFrame(index = range(len(snp_df.columns)),columns=['snp_id'] + ['permutation_'+str(x) for x in range(n_perm)])
+                        #perm_df['snp_id'] = snp_df.columns
                     for currentNperm in utils.chunker(list(range(1, n_perm+1)), permutationStepSize):
+                        
                         if (kinship_df is not None) and (relatedness_score is not None):
                             temp = utils.get_shuffeld_genotypes_preserving_kinship(geneticaly_unique_individuals, relatedness_score, snp_df,kinship_df.loc[individual_ids,individual_ids], len(currentNperm))
                         else:
                             temp = utils.get_shuffeld_genotypes(snp_df, len(currentNperm))
                         temp = temp.astype(float)
-                        alt_lmls_p, effsizes_p = flmm.fast_scan(temp, verbose=False)
-                        var_pvalues_p = lrt_pvalues(null_lml, alt_lmls_p)
+                        
+                        var_pvalues_p = [None] * temp.shape[1]
+                        if pearson: 
+                            for snpPos in range(0, temp.shape[1]) :
+                                rhoP, var_pvalues_p[snpPos] = sp.stats.pearsonr(temp[:,snpPos], phenotype_ds.values)
+                        else : 
+                            for snpPos in range(0, temp.shape[1]) :
+                                rhoP, var_pvalues_p[snpPos] = sp.stats.spearmanr(temp[:,snpPos], phenotype_ds.values)
                         pValueBuffer.extend(np.asarray(var_pvalues_p))
                     if(not(len(pValueBuffer)==totalSnpsToBeTested)):
                         print(len(pValueBuffer))
@@ -628,9 +605,9 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                         print('Error in blocking logic for permutations.')
                         sys.exit()
                     perm = 0
-                    for relevantOutput in utils.chunker(pValueBuffer,G.shape[1]) :
-                        if(write_permutations):
-                            perm_df['permutation_'+str(perm)] = relevantOutput
+                    for relevantOutput in utils.chunker(pValueBuffer,snp_df.shape[1]) :
+                        #if(write_permutations):
+                        #    perm_df['permutation_'+str(perm)] = relevantOutput
                         if(bestPermutationPval[perm] > min(relevantOutput)):
                             bestPermutationPval[perm] = min(relevantOutput)
                         perm = perm+1
@@ -640,8 +617,8 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                 if not temp_df.empty :
                     data_written = True
                     output_writer.add_result_df(temp_df)
-                    if(write_permutations):
-                        permutation_writer.add_permutation_results_df(perm_df,feature_id)
+                    #if(write_permutations):
+                    #    permutation_writer.add_permutation_results_df(perm_df,feature_id)
                 if debugger:
                     fun_end = time.time()
                     print(" Permutations took {}".format(fun_end-fun_start))
@@ -734,9 +711,7 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
         else :
             snp_df.columns = ['snp_id','chromosome','position','assessed_allele','call_rate','maf','hwe_p']
 
-    for rElement in fail_qc_features:
-        feature_list.remove(rElement)
-    
+    feature_list = list(set(feature_list) - set(fail_qc_features))
     annotation_df = annotation_df.reindex(feature_list)
     annotation_df['n_samples'] = n_samples
     annotation_df['n_e_samples'] = n_e_samples

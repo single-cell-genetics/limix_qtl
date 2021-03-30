@@ -24,7 +24,7 @@ def minimal_qtl_processing(QTL_Dir, OutputDir, writeToOneFile=True, compressed =
     #print(os.path.dirname(h5FilesToProcess[1]))
 
     for file in h5FilesToProcess :
-        print(file)
+        #print(file)
         partTmp = os.path.basename(file).replace(qtl_results_file,"").replace(".h5","")
         if(debugMode):
             print(partTmp)
@@ -39,7 +39,7 @@ def minimal_qtl_processing(QTL_Dir, OutputDir, writeToOneFile=True, compressed =
             continue
         #else :
             #print('Processing: '+partTmp)
-        print(partTmp)
+        #print(partTmp)
         if not os.path.isfile(QTL_Dir+"/"+snp_metadata_file+partTmp+".txt"):
             print("Skipping: " +partTmp + " not all necessary files are present.")
             continue
@@ -67,7 +67,8 @@ def minimal_qtl_processing(QTL_Dir, OutputDir, writeToOneFile=True, compressed =
             data[key]=np.zeros(len(np.unique(list(frezkeys))),dtype='object')+np.nan
 
         for ifea,report_feature in enumerate(np.unique(list(frezkeys))):
-            print(report_feature)
+            #if(debugMode):
+                #print(report_feature)
             for key in ['snp_id','p_value','beta','beta_se','empirical_feature_p_value']:
                 temp = np.array(frez[report_feature][key])
                 data[key][ifea]=np.hstack(temp).astype('U')

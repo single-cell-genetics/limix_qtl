@@ -121,7 +121,8 @@ def minimal_qtl_processing(QTL_Dir, OutputDir, featureGroupFile, cis_mode, write
         
         for featGroup in np.unique(data["feature_group"]) :
             #pdb.set_trace()
-            print(featGroup)
+            if(debugMode):
+                print(featGroup)
             selection = np.unique(data.loc[data["feature_group"] == featGroup, "feature_id"])
             permutationValues = None
             for relEntry in selection : 
