@@ -1,7 +1,6 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 
-#from depricated_run_QTL_analysis_limix_1 import run_QTL_analysis
 from run_QTL_analysis import run_QTL_analysis
 from qtl_utilities import merge_QTL_results
 import subprocess
@@ -26,10 +25,10 @@ def results_checking(results_checking_dict,error_tolerance=1e-6):
 
 def test_QTL_analysis():
     '''Run a set of test cases'''
-    data_path = '../geuvadis_CEU_test_data/'
+    data_path = './test_data/'
     covariates_filename = data_path+'Expression/Geuvadis_CEU_YRI_covariates.txt'
     geno_prefix = data_path+'Genotypes/Geuvadis'
-    pheno_filename = data_path+'Expression/Geuvadis_CEU_YRI_Expr.txt.gz'
+    pheno_filename = data_path+'Expression/Geuvadis_CEU_YRI_Expr.txt'
     anno_filename = data_path+'Expression/Geuvadis_CEU_Annot_small.txt'
     individual2sample_filename = data_path + 'Geuvadis_CEU_gte.txt'
     min_maf = 0.05
