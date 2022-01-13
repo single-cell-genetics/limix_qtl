@@ -70,7 +70,7 @@ class text_writer:
 class hdf5_permutations_writer:
 
     def __init__(self,output_filename,n_permutations):
-        self.h5file = tables.open_file(output_filename,'w')
+        self.h5file = tables.open_file(output_filename,'w',max_columns=(n_permutations+2))
         self.column_names = ['snp_id'] + ['permutation_'+str(x) for x in range(n_permutations)]
         #define the permutation result object on-the-fly, depending on the number of permutations that will be performed
         self.permutation_result_definition = dict([(x,tables.Float64Col()) for x in self.column_names if x.split('_')[0]=='permutation'])

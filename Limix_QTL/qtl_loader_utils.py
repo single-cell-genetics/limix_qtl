@@ -1,4 +1,5 @@
-import limix
+from pandas_plink import read_plink
+from bgen_reader import read_bgen
 import pandas as pd
 import numpy as np
 import os
@@ -62,10 +63,34 @@ def get_covariate_df(covariates_filename):
         covariate_df = None
     return covariate_df
 
-def get_genotype_data(geno_prefix):
-    bim,fam,bed = limix.io.plink.read(geno_prefix,verbose=False)
-    fam.set_index('iid',inplace=True)
-    return bim,fam,bed
+def get_genotype_data(geno_prefix, plinkGenotype):
+    if(plinkGenotype):
+        bim,fam,bed = read_plink(geno_prefix,verbose=False)
+        fam.set_index('iid',inplace=True)
+        bgen=None
+    else :
+        bgen = read_bgen(geno_prefix+'.bgen', verbose=False)
+        bed=None
+        fam =bgen['samples']
+        fam = fam.to_frame("iid")
+        fam.set_index('iid',inplace=True)
+        
+        bim = bgen['variants'].compute()
+        bim = bim.assign(i = range(bim.shape[0]))
+        bim['id'] = bim['rsid']
+        bim = bim.rename(index=str, columns={"id": "snp"})
+        bim['a1'] = bim['allele_ids'].str.split(",", expand=True)[0]
+        bim.index = bim["snp"].astype(str).values
+        bim.index.name = "candidate"
+        
+        ##Fix chromosome ids
+        bim['chrom'].replace('^chr','',regex=True,inplace=True)
+        bim['chrom'].replace(['X', 'Y', 'XY', 'MT'], ['23', '24', '25', '26'],inplace=True)
+        ##Remove non-biallelic & non-ploidy 2 (to be sure). (These can't happen in binary plink files).
+        print("Warning, the current software only supports biallelic SNPs and ploidy 2")
+        bim.loc[np.logical_and(bim['nalleles']<3,bim['nalleles']>0),:]
+    
+    return bim,fam,bed,bgen
 
 def get_annotation_df(anno_filename):
     annotation_col_dtypes = {'feature_id':np.object,
