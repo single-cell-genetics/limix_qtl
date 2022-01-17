@@ -60,7 +60,7 @@ def run_PrsQtl_analysis(pheno_filename, anno_filename, prsFile, output_dir, min_
 
     mixed = kinship_df is not None
     if (kinship_df is None) or (relatedness_score is None) : 
-        geneticaly_unique_individuals = np.unique(sample2individual_df['iid']).values
+        geneticaly_unique_individuals = np.unique(sample2individual_df['iid'].values)
     QS = None
     if(feature_list==None or len(feature_list)==0):
         print ('No features to be tested.')

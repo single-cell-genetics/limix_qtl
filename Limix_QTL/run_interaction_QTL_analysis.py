@@ -75,7 +75,7 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
     # Check if kinship matrix is present. The matrix of pairwise genotype similarity. If they are not present took genetically unique individuals based on IDs
     mixed = kinship_df is not None
     if (kinship_df is None) or (relatedness_score is None) :
-        geneticaly_unique_individuals = np.unique(sample2individual_df['iid']).values
+        geneticaly_unique_individuals = np.unique(sample2individual_df['iid'].values)
     QS = None
     
     # Check if feature list is empty (genes)
