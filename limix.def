@@ -11,7 +11,7 @@ From: continuumio/miniconda3
     conda package
     conda config --add channels conda-forge
     # Install C & Python packages with conda.
-    conda install -c conda-forge pytest pytables scikit-learn matplotlib-venn bgen=4
+    conda install -c conda-forge pytest pytables scikit-learn matplotlib-venn pandas-plink bgen=4
     # Install remaining Python packages with pip
     pip install bgen-reader
     pip install glimix-core

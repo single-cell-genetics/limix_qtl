@@ -11,7 +11,8 @@ from scipy.stats import chi2
 import qtl_loader_utils
 import pdb
 from glimix_core.lmm import LMM
-from numpy.linalg import eigh, svd
+from glimix_core.glmm._glmm import GLMM
+from numpy.linalg import eigh, svd, pinv
 import dask.array as da
 
 def run_QTL_analysis_load_intersect_phenotype_covariates_kinship_sample_mapping(pheno_filename, anno_filename, geno_prefix,
@@ -1010,3 +1011,9 @@ def lrt_pvalues(null_lml, alt_lmls, dof=1):
     lrs = clip(-2 * null_lml + 2 * np.asarray(alt_lmls, float), super_tiny, inf)
     pv = chi2(df=dof).sf(lrs)
     return clip(pv, super_tiny, 1 - tiny)
+    
+def glmm_posteriori_covariance_save_decomposition(objct):
+    r"""Covariance of the estimated posteriori."""
+    K = GLMM.covariance(objct)
+    tau = objct._ep._posterior.tau
+    return pinv(pinv(K + (1e-3 * np.identity(K.shape[0])) + np.diag(1 / tau + 1e-3 )))
