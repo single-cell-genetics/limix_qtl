@@ -74,7 +74,6 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
     mixed = kinship_df is not None
     if (kinship_df is None) or (relatedness_score is None) :
         geneticaly_unique_individuals = np.unique(sample2individual_df['iid'].values)
-    QS = None
     
     # Check if feature list is empty (genes)
     if(feature_list==None or len(feature_list)==0):
@@ -99,6 +98,7 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
         print(" Opening writing files took {}".format(fun_end-fun_start))
 
     #Arrays to store indices of snps tested and pass and fail QC SNPs for features without missingness.
+    QS = None
     tested_snp_ids = []
     pass_qc_snps_all = []
     fail_qc_snps_all = []
@@ -504,11 +504,11 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                             snp_df_dosage.loc[:,snp_names[rowNumber]] = snp_df_dosage_t
                             snp_df.loc[:,snp_names[rowNumber]] = snp_df_t
                         rowNumber = rowNumber +1
-                    snp_df_dosage = snp_df_dosage.loc[individual_ids,:]
+                    snp_df_dosage = snp_df_dosage.loc[np.unique(individual_ids),:]
                 
-                snp_df = snp_df.loc[individual_ids,:]
+                snp_df = snp_df.loc[np.unique(individual_ids),:]
             
-                snp_df = snp_df.loc[:,np.unique(snp_df.columns)[np.unique(snp_df.columns,return_counts=1)[1]==1]]
+                ##snp_df = snp_df.loc[:,np.unique(snp_df.columns)[np.unique(snp_df.columns,return_counts=1)[1]==1]]
                 if debugger:
                     fun_end = time.time()
                     print(" Subsetting genotype matrix took {}".format(fun_end-fun_start))
@@ -558,7 +558,6 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                 maf = None
                 hweP = None
                 
-                
                 if snpQcInfo is None and snpQcInfo_t is not None:
                     snpQcInfo = snpQcInfo_t
                 elif snpQcInfo_t is not None:
@@ -574,7 +573,7 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                 snp_df = pd.DataFrame(fill_NaN.fit_transform(snp_df.transpose()).transpose(),index=snp_df.index,columns=snp_df.columns)
                 ##No more snp_matrix_DF > snp_df
 #                test if the covariates, kinship, snp and phenotype are in the same order
-                if (len(snp_df.index) != len(sample2individual_feature.loc[phenotype_ds.index]['iid']) or not all(snp_df.index==sample2individual_feature.loc[phenotype_ds.index]['iid'])):
+                if (len(snp_df.loc[individual_ids,:].index) != len(sample2individual_feature.loc[phenotype_ds.index]['iid']) or not all(snp_df.loc[individual_ids,:].index==sample2individual_feature.loc[phenotype_ds.index]['iid'])):
                     print ('There is an issue in mapping phenotypes and genotypes')
                     sys.exit()
 
@@ -582,7 +581,7 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                 # SCANNING
                 if debugger:
                     fun_start = time.time()
-                G = snp_df.values
+                G = snp_df.loc[individual_ids,:].values
                 G = G.astype(float)
                 G_index = snp_df.columns
                 
@@ -626,9 +625,12 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                         perm_df['snp_id'] = G_index
                     for currentNperm in utils.chunker(list(range(1, n_perm+1)), permutationStepSize):
                         if (kinship_df is not None) and (relatedness_score is not None):
-                            temp = utils.get_shuffeld_genotypes_preserving_kinship(geneticaly_unique_individuals, relatedness_score, snp_df, kinship_df.loc[individual_ids,individual_ids], len(currentNperm))
+                            temp = utils.get_shuffeld_genotypes_preserving_kinship(geneticaly_unique_individuals, relatedness_score, snp_df, kinship_df.loc[np.unique(individual_ids),np.unique(individual_ids)], len(currentNperm))
                         else:
                             temp = utils.get_shuffeld_genotypes(snp_df, len(currentNperm))
+                        
+                        temp = pd.DataFrame(data=temp, index=snp_df.index)
+                        temp = temp.loc[individual_ids,:].values
                         temp = temp.astype(float)
                         scannerOut = flmm.fast_scan(temp, verbose=False)
                         alt_lmls_p = scannerOut['lml']

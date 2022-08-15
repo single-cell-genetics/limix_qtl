@@ -75,8 +75,8 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
     # Check if kinship matrix is present. The matrix of pairwise genotype similarity. If they are not present took genetically unique individuals based on IDs
     mixed = kinship_df is not None
     if (kinship_df is None) or (relatedness_score is None) :
-        geneticaly_unique_individuals = np.unique(sample2individual_df['iid'].values)
-    QS = None
+        geneticaly_unique_individuals = np.unique(sample2individual_df['iid']).values
+
     
     # Check if feature list is empty (genes)
     if(feature_list==None or len(feature_list)==0):
@@ -106,6 +106,7 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
         sys.exit()
     
     #Arrays to store indices of snps tested and pass and fail QC SNPs for features without missingness.
+    QS = None
     tested_snp_ids = []
     pass_qc_snps_all = []
     fail_qc_snps_all = []
@@ -460,11 +461,11 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
                             snp_df_dosage.loc[:,snp_names[rowNumber]] = snp_df_dosage_t
                             snp_df.loc[:,snp_names[rowNumber]] = snp_df_t
                         rowNumber = rowNumber +1
-                    snp_df_dosage = snp_df_dosage.loc[individual_ids,:]
+                    snp_df_dosage = snp_df_dosage.loc[np.unique(individual_ids),:]
                 
-                snp_df = snp_df.loc[individual_ids,:]
+                snp_df = snp_df.loc[np.unique(individual_ids),:]
             
-                snp_df = snp_df.loc[:,np.unique(snp_df.columns)[np.unique(snp_df.columns,return_counts=1)[1]==1]]
+                ##snp_df = snp_df.loc[:,np.unique(snp_df.columns)[np.unique(snp_df.columns,return_counts=1)[1]==1]]
                 if debugger:
                     fun_end = time.time()
                     print(" Subsetting genotype matrix took {}".format(fun_end-fun_start))
@@ -529,7 +530,7 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
                 snp_df = pd.DataFrame(fill_NaN.fit_transform(snp_df.transpose()).transpose(),index=snp_df.index,columns=snp_df.columns)
                 ##No more snp_matrix_DF > snp_df
 #                test if the covariates, kinship, snp and phenotype are in the same order
-                if (len(snp_df.index) != len(sample2individual_feature.loc[phenotype_ds.index]['iid']) or not all(snp_df.index==sample2individual_feature.loc[phenotype_ds.index]['iid'])):
+                if (len(snp_df.loc[individual_ids,:].index) != len(sample2individual_feature.loc[phenotype_ds.index]['iid']) or not all(snp_df.loc[individual_ids,:].index==sample2individual_feature.loc[phenotype_ds.index]['iid'])):
                     print ('There is an issue in mapping phenotypes and genotypes')
                     sys.exit()
                 #print(snp_df)
@@ -542,9 +543,10 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
                 for snp_selection in range(snp_df.shape[1]):
                     #print(snp_selection)
                     #pdb.set_trace()
-                    snpForTest = snp_df.loc[:,snp_df.columns[snp_selection]].copy(deep=True)
+                    snpForTest = snp_df.loc[individual_ids,snp_df.columns[snp_selection]].copy(deep=True)
                     if (not plinkGenotype):
-                        snpForTest = snp_df_dosage.loc[:,snp_df_dosage.columns[snp_selection]].copy(deep=True)
+                        snpForTest = snp_df_dosage.loc[individual_ids,snp_df_dosage.columns[snp_selection]].copy(deep=True)
+                    
                     cov_matrix_snp = np.column_stack((cov_matrix, snpForTest))
                     
                     ##########################################################################################################################################################
@@ -554,6 +556,13 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
                     if randomeff_mix:
                         #mixingParameters = utils.rhoTest(best=None, phenotype = phenotype, cov_matrix=cov_matrix_snp, Sigma_qs=Sigma_qs, mixed=mixed, lastMove=None, rhoArray = rho1, verbose = True)
                         mixingParameters = utils.rhoTestBF(best=None, phenotype = phenotype, cov_matrix=cov_matrix_snp, Sigma_qs=Sigma_qs, mixed=mixed, lastMove=None, rhoArray = rho1, verbose = False)
+                        
+                                                                          
+                                                                
+                                                 
+                                                                        
+                                                      
+                                                                               
                         
                         lmm = mixingParameters["lmm"]
                         feature_best_rho = mixingParameters["rho"]
