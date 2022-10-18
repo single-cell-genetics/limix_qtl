@@ -6,12 +6,12 @@ From: continuumio/miniconda3
     /bin/bash
 %post
     export PATH=/opt/conda/bin:${PATH}
-    #git clone https://github.com/single-cell-genetics/limix_qtl.git
+    git clone https://github.com/single-cell-genetics/limix_qtl.git
     # Initiate conda
     conda package
     conda config --add channels conda-forge
     # Install C & Python packages with conda.
-    conda install -c conda-forge pytest pytables scikit-learn matplotlib-venn pandas-plink bgen=4
+    conda install -c conda-forge python=3.8 'blas=*=*mkl' 'numpy>=1.21' pytest pytables scikit-learn matplotlib-venn bgen=4 pandas-plink
     # Install remaining Python packages with pip
     pip install bgen-reader
     pip install glimix-core
