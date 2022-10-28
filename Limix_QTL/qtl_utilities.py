@@ -868,7 +868,8 @@ def rhoTestBF(best, phenotype, cov_matrix, Sigma_qs, mixed, lastMove, rhoArray, 
     
     if(len(loc)==1):
         #We have one optimum.
-        print(rhoArray[loc[0]])
+        if verbose:
+                print(rhoArray[loc[0]])
         mixingParameters["rho"] = rhoArray[loc[0]]
         mixingParameters["lmm"] =  bestLmm
     else :
