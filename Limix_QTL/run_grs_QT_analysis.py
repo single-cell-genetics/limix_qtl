@@ -275,7 +275,7 @@ def run_PrsQtl_analysis(pheno_filename, anno_filename, prsFile, output_dir, min_
                 #pdb.set_trace()
                 if snp_cov_df is not None:
                     snp_cov_df_tmp = snp_cov_df.loc[individual_ids,:]
-                    snp_cov_df = pd.DataFrame(fill_NaN.fit_transform(snp_cov_df_tmp.transpose()).transpose())
+                    snp_cov_df = pd.DataFrame(fill_NaN.fit_transform(snp_cov_df_tmp))
                     snp_cov_df.index=sample2individual_feature['sample']
                     snp_cov_df.columns=snp_cov_df_tmp.columns
                     cov_matrix = np.concatenate((cov_matrix,snp_cov_df.values),1)
@@ -363,7 +363,8 @@ def run_PrsQtl_analysis(pheno_filename, anno_filename, prsFile, output_dir, min_
                 snp_matrix_DF = snp_matrix_DF.loc[:,list(snp_matrix_DF.columns[selection])]
                 if  snp_matrix_DF.shape[1]==0:
                     continue
-                snp_matrix_DF = pd.DataFrame(fill_NaN.fit_transform(snp_matrix_DF.transpose()).transpose()),index=snp_matrix_DF.index,columns=snp_matrix_DF.columns)
+                
+                snp_matrix_DF = pd.DataFrame(fill_NaN.fit_transform(snp_matrix_DF),index=snp_matrix_DF.index,columns=snp_matrix_DF.columns)
                 #
                 
                 G = snp_matrix_DF.values
@@ -421,7 +422,6 @@ def run_PrsQtl_analysis(pheno_filename, anno_filename, prsFile, output_dir, min_
                     perm = 0
                     for relevantOutput in utils.chunker(pValueBuffer,G.shape[1]) :
                         if(write_permutations):
-                        if(write_permutations):
                             if(write_zscore):
                                 sPos = 0 + G.shape[1]*perm
                                 ePos = sPos + G.shape[1]
@@ -459,12 +459,9 @@ def run_PrsQtl_analysis(pheno_filename, anno_filename, prsFile, output_dir, min_
             QS = None
             Sigma_qs = None
             geneticaly_unique_individuals = tmp_unique_individuals
-            del tmp_unique_individuals
-            
             snpQcInfo = snpQcInfo.to_frame(name="call_rate")
             snpQcInfo.index.name = "snp_id"
             snpQcInfo.to_csv(output_dir+'/snp_qc_metrics_naContaining_feature_{}.txt'.format(feature_id),sep='\t')
-            del QS_tmp
             del tmp_unique_individuals
         else:
             if (snpQcInfo is not None and snpQcInfoMain is not None):

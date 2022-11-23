@@ -30,7 +30,7 @@ def test_QTL_analysis():
     geno_prefix = data_path+'Genotypes/Geuvadis'
     pheno_filename = data_path+'Expression/Geuvadis_CEU_YRI_Expr.txt'
     anno_filename = data_path+'Expression/Geuvadis_CEU_Annot_small.txt'
-    kinship_filename= data_path+'Genotypes/Geuvadis_chr1_kinship.normalized.txt,'
+    kinship_filename= data_path+'Genotypes/Geuvadis_chr1_kinship.normalized.txt'
     individual2sample_filename = data_path + 'Geuvadis_CEU_gte.txt'
     min_maf = 0.15
     min_hwe_P=0.001
@@ -40,11 +40,11 @@ def test_QTL_analysis():
     randomSeed = 73
     chromosome = '1'
     
-    ws = 25000
+    ws = 100000
     
     run_QTL_analysis(pheno_filename,anno_filename,geno_prefix,False,output_dir,ws,
                      min_maf, min_hwe_P, min_call_rate,
-                     blocksize,cis_mode=True, seed=randomSeed, n_perm=1000, snps_filename=None,feature_filename = None,
+                     blocksize,cis_mode=True, seed=randomSeed, n_perm=100, snps_filename=None,feature_filename = None,
                      genetic_range=chromosome,
                      covariates_filename=covariates_filename,
                      randomeff_filename=kinship_filename, write_permutations = True,
