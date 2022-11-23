@@ -389,7 +389,7 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                 if snp_cov_df is not None:
                     snp_cov_df_tmp = snp_cov_df.loc[individual_ids,:]
                     snp_cov_df_tmp.index=sample2individual_feature['sample']
-                    snp_cov_df = pd.DataFrame(fill_NaN.fit_transform(snp_cov_df_tmp.transpose()).transpose())
+                    snp_cov_df = pd.DataFrame(fill_NaN.fit_transform(snp_cov_df_tmp))
                     snp_cov_df.index=snp_cov_df_tmp.index
                     snp_cov_df.columns=snp_cov_df_tmp.columns
                     cov_matrix = np.concatenate((cov_matrix,snp_cov_df.values),1)
@@ -549,7 +549,7 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                     snp_df= snp_df_dosage.loc[:,np.unique(snp_df.columns)]
                     snp_df_dosage = None
                 #We could make use of relatedness when imputing.  And impute only based on genetically unique individuals.
-                snp_df = pd.DataFrame(fill_NaN.fit_transform(snp_df.transpose()).transpose(),index=snp_df.index,columns=snp_df.columns)
+                snp_df = pd.DataFrame(fill_NaN.fit_transform(snp_df),index=snp_df.index,columns=snp_df.columns)
                 ##No more snp_matrix_DF > snp_df
 #                test if the covariates, kinship, snp and phenotype are in the same order
                 if (len(snp_df.loc[individual_ids,:].index) != len(sample2individual_feature.loc[phenotype_ds.index]['iid']) or not all(snp_df.loc[individual_ids,:].index==sample2individual_feature.loc[phenotype_ds.index]['iid'])):
