@@ -110,6 +110,9 @@ def get_interaction_args():
                         'This can be used to either link multiple test regions to one feature or exclude multiple regions while testing a feature.', required=False)
     parser.add_argument('--regress_snp_interaction','-rsi', action="store_true",required=False,default=False)
     parser.add_argument("--regress_covariates","-rc",
+                        help=
+                        'This first regresses out the effect of the covariates before fitting the LMM to test the effects for speed.'
+                        'However, it only works when you have your interaction term as your first covariate in the covariate file.'
                         action="store_true",
                         help="Regress-out covariates, using a LMM, before running the QTL mapping.", default=False)
     parser.add_argument('--relatedness_score','-rs',required=False,default=None)
