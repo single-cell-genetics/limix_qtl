@@ -160,7 +160,7 @@ def run_QTL_analysis_load_intersect_phenotype_covariates_kinship_sample_mapping(
     print("Number of samples with genotype & phenotype data: " + str(sample2individual_df.shape[0]))
     if(sample2individual_df.shape[0]<minimum_test_samples):
         print("Not enough samples with both genotype & phenotype data.")
-        sys.exit()
+        sys.exit(1)
         
     ##Filter now the actual data!
     #Filter phenotype data based on the linking files.
