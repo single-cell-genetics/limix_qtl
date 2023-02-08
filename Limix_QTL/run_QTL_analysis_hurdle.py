@@ -549,7 +549,7 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                 lmm.fit(verbose=False)
                 
                 #pdb.set_trace();
-                np.savez("/home/m414r/glmmFit"+feature_id+".npz", phen=phenotype_b, covM=cov_matrix, Q0 = np.asarray(QS[0]), Q1 = np.asarray(QS[1]))
+                #np.savez("/home/m414r/glmmFit"+feature_id+".npz", phen=phenotype_b, covM=cov_matrix, Q0 = np.asarray(QS[0]), Q1 = np.asarray(QS[1]))
                 if(not np.isnan(zeroValue)):
                     glmm.fit(verbose=False)
             print("Done.")

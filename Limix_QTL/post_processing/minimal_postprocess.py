@@ -6,6 +6,7 @@ import pandas as pd
 import argparse
 import glob
 import pdb
+from pathlib import Path
 
 def minimal_qtl_processing(QTL_Dir, OutputDir, writeToOneFile=True, compressed = False, overWrite=True, minimalPValue = 1, minimalFeaturePValue = 1, topMode = False, debugMode = False):
     qtl_results_file='qtl_results_'
@@ -15,15 +16,17 @@ def minimal_qtl_processing(QTL_Dir, OutputDir, writeToOneFile=True, compressed =
         output_file='top_qtl_results_'
     else:
         output_file='qtl_results_'
-
-
+    
     h5FilesToProcess = (glob.glob(QTL_Dir+"/qtl_*.h5"))
-
+    
     #iterate over h5files
     #print(h5FilesToProcess)
     #print(os.path.dirname(h5FilesToProcess[1]))
-
+    
+    wroteData = False
+    
     for file in h5FilesToProcess :
+        wroteData = True
         #print(file)
         partTmp = os.path.basename(file).replace(qtl_results_file,"").replace(".h5","")
         if(debugMode):
@@ -81,7 +84,6 @@ def minimal_qtl_processing(QTL_Dir, OutputDir, writeToOneFile=True, compressed =
 
         temp = pd.merge(temp, ffea, on='feature_id', how='left')
 
-
         if(len(glob.glob(QTL_Dir+'snp_qc_metrics_naContaining_feature_*.txt'))>0):
             ##Here we need to check, we can based on the output of glob do this quicker.
             temp2 = pd.DataFrame(columns=temp.columns)
@@ -124,6 +126,10 @@ def minimal_qtl_processing(QTL_Dir, OutputDir, writeToOneFile=True, compressed =
             temp.to_csv(path_or_buf=outputFile, mode='w'if not os.path.isfile(outputFile) else 'a', sep='\t', columns=None,index=None, header= True if not os.path.isfile(outputFile) else False)
         else:
             temp.to_csv(path_or_buf=outputFile+".gz", mode='w'if not os.path.isfile(outputFile) else 'a', sep='\t', columns=None,index=None,compression='gzip', header= True if not os.path.isfile(outputFile) else False )
+        
+    if writeToOneFile and not wroteData:
+        Path(OutputDir+output_file+"all.txt").touch()
+
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Run QTL analysis given genotype, phenotype, and annotation.')

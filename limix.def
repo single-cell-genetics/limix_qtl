@@ -19,6 +19,6 @@ From: continuumio/miniconda3
     apt-get update 
     apt-get -y install r-base
     # Install R packages (from within R)
-    R --slave -e 'install.packages(c("BiocManager","dplyr","readr"))'
-    R --slave -e 'BiocManager::install(c("qvalue","multtest","rhdf5"))'
+    R --slave -e 'install.packages(c("BiocManager"))'
+    R --slave -e 'BiocManager::install(c("qvalue","multtest","rhdf5","dplyr","readr"))'
 ##############################################################################
