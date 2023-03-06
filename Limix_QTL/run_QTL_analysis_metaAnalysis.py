@@ -700,6 +700,8 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                 beta_params.append(beta_para)
             if randomeff_mix :
                 random_eff_param.append(feature_best_rho)
+            ##Here we need to store a file per feature for the permutation distribution, and go to 32 bit for storage size.
+            perm_summary_df.astype('float32').to_pickle(output_dir+'/Permutation_information_{}.pickle.gz'.format(feature_id.replace("/","-")))
         
         if contains_missing_samples:
             QS = None
@@ -722,9 +724,6 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
             #snpQcInfo2.to_csv(output_dir+'/snp_qc_metrics_feature_{}.txt'.format(feature_id),sep='\t')
         #print('step 5')
         
-        ##Here we need to store a file per feature for the permutation distribution, and go to 32 bit for storage size.
-        perm_summary_df.astype('float32').to_pickle(output_dir+'/Permutation_information_{}.pickle.gz'.format(feature_id.replace("/","-")))
-                
         print("Time: --- %s seconds ---" % (time.time() - start_time))
         tot_time += time.time() - start_time
         idx += 1
