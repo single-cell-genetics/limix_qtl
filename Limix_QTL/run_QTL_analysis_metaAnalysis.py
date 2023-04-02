@@ -672,8 +672,8 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                     tmp_df.index = perm_df['snp_id']
                     tmp_df.columns = columns=['Mean','Sd']
                     ##Add to feature level information.
-                    if snpQcInfo is None:
-                        perm_summary_df = tmp_df
+                    if perm_summary_df is None:
+                        perm_summary_df = tmp_df.copy(deep=True)
                     else:
                         perm_summary_df = pd.concat([perm_summary_df, tmp_df], axis=0, sort = False)
                     
