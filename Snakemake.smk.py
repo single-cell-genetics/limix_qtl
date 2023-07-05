@@ -90,7 +90,7 @@ rule run_qtl_mapping:
     run:
         chunkFull = extendChunk({wildcards.chunk})
         shell(
-            " singularity exec --bind ~ ~/limix.simg python /limix_qtl/Limix_QTL/post-processing_QTL/minimal_postprocess.py  "
+            " singularity exec --bind ~ ~/limix.simg python /limix_qtl/Limix_QTL/run_QTL_analysis.py  "
             " --bgen {params.gen} "
             " -af {input.af} "
             " -pf {input.pf} "
