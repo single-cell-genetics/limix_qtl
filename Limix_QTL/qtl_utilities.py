@@ -100,8 +100,7 @@ def run_QTL_analysis_load_intersect_phenotype_covariates_kinship_sample_mapping(
 
     print("Intersecting data.")
     if(annotation_df.shape[0] != annotation_df.groupby(annotation_df.index).first().shape[0]):
-        print("Only one location per feature supported. If multiple locations are needed please look at: --extended_anno_file")
-        sys.exit()
+        sys.exit("Only one location per feature supported. If multiple locations are needed please look at: --extended_anno_file")
 
     ##Make sure that there is only one entry per feature id!.
 
