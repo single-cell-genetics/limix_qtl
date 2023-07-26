@@ -89,7 +89,7 @@ def get_interaction_args():
                         help=
                         'A genomic range to do selecte features to be considered in the analysis.'
                         'Available options: all (default), a chromsome or chromosome:start-end.',default='all')
-    parser.add_argument('--covariates_file','-cf',required=False,default=None)
+    parser.add_argument('--covariates_file','-cf',required=True,default=None)
     parser.add_argument('--randomeff_files','-rf',required=False,default=None,
                         help = """The random effect files divided by a comma. The first one should be the kinship file and the second one should contain the read depth. You can also
                                just input only one of them but the order is important""")
