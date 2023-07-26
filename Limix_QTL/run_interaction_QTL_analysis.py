@@ -87,9 +87,13 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
         fun_start = time.time()
     qtl_loader_utils.ensure_dir(output_dir)
     if not selectionStart is None :
-        output_writer = qtl_output.hdf5_writer(output_dir+'/qtl_results_{}_{}_{}.h5'.format(chromosome,selectionStart,selectionEnd))
+        output_writer = qtl_output.hdf5_writer(output_dir+'/iqtl_results_{}_{}_{}.h5'.format(chromosome,selectionStart,selectionEnd))
+        output_writer_snp = qtl_output.hdf5_writer(output_dir+'/iqtl_results_snp_{}_{}_{}.h5'.format(chromosome,selectionStart,selectionEnd))
+        output_writer_cov = qtl_output.hdf5_writer(output_dir+'/iqtl_results_cov_{}_{}_{}.h5'.format(chromosome,selectionStart,selectionEnd))
     else :
-        output_writer = qtl_output.hdf5_writer(output_dir+'/qtl_results_{}.h5'.format(chromosome))
+        output_writer = qtl_output.hdf5_writer(output_dir+'/iqtl_results_{}.h5'.format(chromosome))
+        output_writer_snp = qtl_output.hdf5_writer(output_dir+'/iqtl_results_snp_{}.h5'.format(chromosome))
+        output_writer_cov = qtl_output.hdf5_writer(output_dir+'/iqtl_results_cov_{}.h5'.format(chromosome))
     if(write_permutations):
         if not selectionStart is None :
             permutation_writer = qtl_output.hdf5_permutations_writer(output_dir+'/perm_results_{}_{}_{}.h5'.format(chromosome,selectionStart,selectionEnd),n_perm)
@@ -612,6 +616,7 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
                     G_index = snp_df.columns[snp_selection]
                     
                     scannerOut = flmm.fast_scan(G, verbose=False)
+                    #pdb.set_trace()
                     alt_lmls = scannerOut['lml']
                     effsizes = scannerOut['effsizes1']
                     var_effsizes_se = scannerOut['effsizes1_se']
@@ -621,6 +626,25 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
                         print(" Actual scanning took {}".format(fun_end-fun_start))
                     #########################################################################################################################################################
                     #pdb.set_trace()
+                    #add these results to qtl_results
+                    temp_df_snp = pd.DataFrame(index = range(1),columns=['feature_id','snp_id','p_value','beta','beta_se','empirical_feature_p_value'])
+                    temp_df_snp['snp_id'] = G_index
+                    temp_df_snp['feature_id'] = feature_id
+                    temp_df_snp['beta'] = np.asarray(scannerOut['effsizes0'][0][(scannerOut['effsizes0'][0].shape[0])-1])
+                    temp_df_snp['p_value'] = -1.0
+                    temp_df_snp['beta_se'] = np.asarray(scannerOut['effsizes0_se'][0][(scannerOut['effsizes0_se'][0].shape[0])-1])
+                    #insert default dummy value
+                    temp_df_snp['empirical_feature_p_value'] = -1.0
+                    
+                    temp_df_cov = pd.DataFrame(index = range(1),columns=['feature_id','snp_id','p_value','beta','beta_se','empirical_feature_p_value'])
+                    temp_df_cov['snp_id'] = G_index
+                    temp_df_cov['feature_id'] = feature_id
+                    temp_df_cov['beta'] = np.asarray(scannerOut['effsizes0'][0][np.where(covariate_df.columns==interaction_term)[0][0]])
+                    temp_df_cov['p_value'] = -1.0
+                    temp_df_cov['beta_se'] = np.asarray(scannerOut['effsizes0_se'][0][np.where(covariate_df.columns==interaction_term)[0][0]])
+                    #insert default dummy value
+                    temp_df_cov['empirical_feature_p_value'] = -1.0
+                    
                     #add these results to qtl_results
                     temp_df = pd.DataFrame(index = range(1),columns=['feature_id','snp_id','p_value','beta','beta_se','empirical_feature_p_value'])
                     temp_df['snp_id'] = G_index
@@ -689,6 +713,8 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
                     if not temp_df.empty :
                         data_written = True
                         output_writer.add_result_df(temp_df)
+                        output_writer_snp.add_result_df(temp_df_snp)
+                        output_writer_cov.add_result_df(temp_df_cov)
                         if(write_permutations):
                            permutation_writer.add_permutation_results_df(perm_df,feature_id)
                     if debugger:
@@ -702,6 +728,7 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
             n_e_samples.append(len(geneticaly_unique_individuals))
             if(n_perm>1):
                 #updated_permuted_p_in_hdf5(bestPermutationPval, feature_id);
+                ##Currenty we do the permutations per feature, all permutations over the interaction terms are combined (not ideal?)
                 alpha_para, beta_para = output_writer.apply_pval_correction(feature_id,bestPermutationPval, cis_mode)
                 if write_feature_top_permutations:
                     np.savetxt(output_dir+"/Permutation.pValues."+feature_id.replace("/","-")+".txt",bestPermutationPval)
