@@ -14,6 +14,7 @@ from glimix_core.lmm import LMM
 from glimix_core.glmm._glmm import GLMM
 from numpy.linalg import eigh, svd, pinv, solve, norm
 import dask.array as da
+import random
 
 def run_QTL_analysis_load_intersect_phenotype_covariates_kinship_sample_mapping(pheno_filename, anno_filename, geno_prefix,
         plinkGenotype, minimum_test_samples= 10, relatedness_score=None, cis_mode=True, skipAutosomeFiltering = False, snps_filename=None,
@@ -100,7 +101,8 @@ def run_QTL_analysis_load_intersect_phenotype_covariates_kinship_sample_mapping(
 
     print("Intersecting data.")
     if(annotation_df.shape[0] != annotation_df.groupby(annotation_df.index).first().shape[0]):
-        sys.exit("Only one location per feature supported. If multiple locations are needed please look at: --extended_anno_file")
+        print("Only one location per feature supported. If multiple locations are needed please look at: --extended_anno_file")
+        sys.exit()
 
     ##Make sure that there is only one entry per feature id!.
 
@@ -546,40 +548,6 @@ def force_normal_distribution(phenotype, method='gaussnorm', reference=None):
     else:
         print ('methods are: log, log_standardize, standardize, gaussnorm, ranknorm, ranknorm_duplicates, arcsin, arcsin_standardize')
 
-#get_shuffeld_genotypes_preserving_kinship(genetically_unique_individuals, relatedness_score, snp_matrix_DF,kinship_df.loc[individual_ids,individual_ids], n_perm)
-def get_shuffeld_genotypes_preserving_kinship(genetically_unique_individuals, relatedness_score, snp_matrix_DF,kinship_df1,n_perm):
-
-    # take only one line for replicates (those with the same name)
-    boolean_selection = ~snp_matrix_DF.index.duplicated()
-    temp = snp_matrix_DF.loc[boolean_selection,:]
-
-    boolean_selection = ~kinship_df1.index.duplicated()
-    kinship_df1 = kinship_df1.loc[boolean_selection, boolean_selection]
-
-    # subset snp matrix to genetically_unique_individuals
-    u_snp_matrix = temp.loc[genetically_unique_individuals,:]
-
-    '''has replicates but not same lines form donor (np.setdiff1d(individual_ids,genetically_unique_individuals))'''
-    #Shuffle and reinflate
-    locationBuffer = np.zeros(snp_matrix_DF.shape[0], dtype=np.int)
-    #Prepare location search for permuted snp_matrix_df.
-    index_samples = np.arange(u_snp_matrix.shape[0])
-    for index,current_name in enumerate(genetically_unique_individuals):
-        # find all samples that are related to current_name, or are current_name itself.
-        kinship_row = kinship_df1.loc[current_name]
-        selection = np.logical_or(kinship_row>=relatedness_score, kinship_row.index==current_name)
-        locationBuffer[np.where(selection)] = index 
-    snp_matrix_copy = np.zeros((snp_matrix_DF.shape[0],snp_matrix_DF.shape[1]*n_perm))
-    counter = 0
-    end = (snp_matrix_DF.shape[1])
-    for perm_id in range(0,n_perm) :
-        np.random.shuffle(index_samples)
-        temp_u = u_snp_matrix.values[index_samples,:]
-        snp_matrix_copy[:,counter:end] = temp_u[locationBuffer,:]
-        counter+= snp_matrix_DF.shape[1]
-        end+= snp_matrix_DF.shape[1]
-    return(snp_matrix_copy)
-
 def get_shuffeld_genotypes(snp_matrix_DF,n_perm):
     snp_matrix_copy = np.zeros((snp_matrix_DF.shape[0],snp_matrix_DF.shape[1]*n_perm))
     counter = 0
@@ -591,6 +559,114 @@ def get_shuffeld_genotypes(snp_matrix_DF,n_perm):
         snp_matrix_copy[:,counter:end] = snp_matrix_DF.values[index_samples,:]
         counter+= snp_matrix_DF.shape[1]
         end+= snp_matrix_DF.shape[1]
+    return(snp_matrix_copy)
+
+#get_shuffeld_genotypes_preserving_kinship(genetically_unique_individuals, relatedness_score, snp_matrix_DF,kinship_df.loc[individual_ids,individual_ids], n_perm)
+def get_shuffeld_genotypes_preserving_kinship(genetically_unique_individuals, relatedness_score, snp_matrix_DF,kinship_df1,n_perm):
+    snp_matrix_copy = None
+    if relatedness_score is None:
+        print("Warning: trying to perserve kinship when permuting but no relatedness score is provided. Please use a normalize kiship with cutoff to use this functionality. \nDefaulting to regular shuffleing.")
+        snp_matrix_copy = get_shuffeld_genotypes(snp_matrix_DF,n_perm)
+    else :
+        # take only one line for replicates (those with the same name)
+        boolean_selection = ~snp_matrix_DF.index.duplicated()
+        temp = snp_matrix_DF.loc[boolean_selection,:]
+        
+        boolean_selection = ~kinship_df1.index.duplicated()
+        kinship_df1 = kinship_df1.loc[boolean_selection, boolean_selection]
+        
+        # subset snp matrix to genetically_unique_individuals
+        u_snp_matrix = temp.loc[genetically_unique_individuals,:]
+    
+        '''has replicates but not same lines form donor (np.setdiff1d(individual_ids,genetically_unique_individuals))'''
+        #Shuffle and reinflate
+        locationBuffer = np.zeros(snp_matrix_DF.shape[0], dtype=np.int)
+        #Prepare location search for permuted snp_matrix_df.
+        index_samples = np.arange(u_snp_matrix.shape[0])
+        for index,current_name in enumerate(genetically_unique_individuals):
+            # find all samples that are related to current_name, or are current_name itself.
+            kinship_row = kinship_df1.loc[current_name]
+            selection = np.logical_or(kinship_row>=relatedness_score, kinship_row.index==current_name)
+            locationBuffer[np.where(selection)] = index 
+        snp_matrix_copy = np.zeros((snp_matrix_DF.shape[0],snp_matrix_DF.shape[1]*n_perm))
+        counter = 0
+        end = (snp_matrix_DF.shape[1])
+        for perm_id in range(0,n_perm) :
+            np.random.shuffle(index_samples)
+            temp_u = u_snp_matrix.values[index_samples,:]
+            snp_matrix_copy[:,counter:end] = temp_u[locationBuffer,:]
+            counter+= snp_matrix_DF.shape[1]
+            end+= snp_matrix_DF.shape[1]
+    return(snp_matrix_copy)
+
+def get_shuffled_interactions_preserving_kinship(snp_matrix_DF, kinship_df1, inter, genetically_unique_individuals, individual_ids, relatedness_score, sample2individual_feature, n_perm):
+    
+    snp_matrix_copy = None
+    if relatedness_score is None:
+        print("Warning: trying to perserve kinship when permuting but no relatedness score is provided. Please use a normalize kiship with cutoff to use this functionality. \nDefaulting to regular shuffleing.")
+        temp = pd.DataFrame(np.atleast_2d((snp_matrix_DF.iloc[:,0].values * inter.values).T).T,index=snp_matrix_DF.index,columns=snp_matrix_DF.columns)
+        snp_matrix_copy = get_shuffeld_genotypes(temp,n_perm)
+        snp_matrix_copy = pd.DataFrame(data=snp_matrix_copy, index=u_snp_matrix.index)
+        snp_matrix_copy = snp_matrix_copy.loc[individual_ids,:]
+    else :
+        # take only one line for replicates (those with the same name)
+        boolean_selection = ~snp_matrix_DF.index.duplicated()
+        temp = snp_matrix_DF.loc[boolean_selection,:]
+        
+        boolean_selection = ~kinship_df1.index.duplicated()
+        kinship_df1 = kinship_df1.loc[boolean_selection, boolean_selection]
+        # subset snp matrix to genetically_unique_individuals
+        u_snp_matrix = temp.loc[genetically_unique_individuals,:]
+        kinship_df1_u = kinship_df1.loc[genetically_unique_individuals,genetically_unique_individuals]
+        '''has replicates but not same lines form donor (np.setdiff1d(individual_ids,genetically_unique_individuals))'''
+        #pdb.set_trace()
+        #Shuffle and reinflate.
+        locationBuffer = np.zeros(temp.shape[0], dtype=np.int)
+        #Prepare location search for permuted snp_matrix_df.
+        index_samples = np.arange(u_snp_matrix.shape[0])
+        
+        for index,current_name in enumerate(genetically_unique_individuals):
+            # find all samples that are related to current_name, or are current_name itself.
+            kinship_row = kinship_df1_u.loc[current_name]
+            selection = np.logical_or(kinship_row>=relatedness_score, kinship_row.index==current_name)
+            locationBuffer[np.where(selection)] = index
+        #pdb.set_trace()
+        
+        snp_matrix_copy = np.zeros((temp.shape[0],temp.shape[1]*n_perm))
+        individual_index = np.empty((temp.shape[0],n_perm), dtype='object')
+        individual_index[:] = 'NA'
+        ##inter_copy = np.zeros((temp.shape[0],temp.shape[1]*n_perm)) ##We are here
+        counter = 0
+        end = (temp.shape[1])
+        
+        for perm_id in range(0,n_perm) :
+            np.random.shuffle(index_samples)
+            snp_matrix_copy[:,counter:end] = u_snp_matrix.values[index_samples[locationBuffer],:]
+            individual_index[:,perm_id] = u_snp_matrix.index[index_samples[locationBuffer]].values
+            counter+= temp.shape[1]
+            end+= temp.shape[1]
+        #pdb.set_trace()
+        
+        ##Re-inflate.
+        snp_matrix_copy = pd.DataFrame(data=snp_matrix_copy, index=u_snp_matrix.index)
+        snp_matrix_copy = snp_matrix_copy.loc[individual_ids,:]
+        
+        individual_index = pd.DataFrame(data=individual_index, index=u_snp_matrix.index)
+        individual_index = individual_index.loc[individual_ids,:]
+        
+        counter = 0
+        end = (temp.shape[1])
+        sys_random = random.SystemRandom()
+        for perm_id in range(0,n_perm):
+            expIds = []
+            for rel in individual_index.iloc[:,perm_id] :
+                expIds.append(sample2individual_feature.iloc[sys_random.choice(np.where(sample2individual_feature.iloc[:,0]==rel)[0]),1])
+            #pdb.set_trace()
+            snp_matrix_copy.iloc[:,counter:end] = np.multiply(snp_matrix_copy.iloc[:,counter:end].values.T,inter.loc[expIds].values).T
+            counter+= temp.shape[1]
+            end+= temp.shape[1]
+        
+        #pdb.set_trace()
     return(snp_matrix_copy)
 
 def qtl_plot(snp_matrix_DF, phenotype,K=None, M=None,LMM=None,snp=None,show_reg_cov=True):
