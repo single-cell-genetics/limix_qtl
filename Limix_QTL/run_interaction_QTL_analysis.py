@@ -428,8 +428,6 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
             for snpGroup in utils.chunker(snpQuery, blocksize):
                 countChunker=countChunker+1
                 #print(countChunker)
-                #Fix seed at the start of the first chunker so all permutations are based on the same random first split.
-                np.random.seed(seed)
                 #print(snpGroup)
                 snp_idxs = snpGroup['i'].values
                 snp_names = snpGroup['snp'].values
@@ -543,12 +541,15 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
                 if debugger:
                     fun_start = time.time()
                     
-                for snp_selection in range(snp_df.shape[1]):
+                for snp_selection in snp_df.columns:
+                    #Fix seed for every SNP in the snp_df.
+                    np.random.seed(seed)
+                    
                     #print(snp_selection)
                     #pdb.set_trace()
-                    snpForTest = snp_df.loc[individual_ids,snp_df.columns[snp_selection]].copy(deep=True)
+                    snpForTest = snp_df.loc[individual_ids,snp_selection].copy(deep=True)
                     if (not plinkGenotype):
-                        snpForTest = snp_df_dosage.loc[individual_ids,snp_df_dosage.columns[snp_selection]].copy(deep=True)
+                        snpForTest = snp_df_dosage.loc[individual_ids,snp_selection].copy(deep=True)
                     
                     cov_matrix_snp = np.column_stack((cov_matrix, snpForTest))
                     
@@ -610,10 +611,10 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
                     
                     if(regres_snp_from_env):
                         inter = utils.regressOut(inter,np.concatenate(([snpForTest], [np.ones_like(inter.values)]),axis=0).T)
-                    
+                    #pdb.set_trace()
                     G = np.atleast_2d((snpForTest.values * inter.values).T).T
                     G = G.astype(float)
-                    G_index = snp_df.columns[snp_selection]
+                    ## G_index = snp_selection (Dropping this)
                     
                     scannerOut = flmm.fast_scan(G, verbose=False)
                     #pdb.set_trace()
@@ -628,7 +629,7 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
                     #pdb.set_trace()
                     #add these results to qtl_results
                     temp_df_snp = pd.DataFrame(index = range(1),columns=['feature_id','snp_id','p_value','beta','beta_se','empirical_feature_p_value'])
-                    temp_df_snp['snp_id'] = G_index
+                    temp_df_snp['snp_id'] = snp_selection
                     temp_df_snp['feature_id'] = feature_id
                     temp_df_snp['beta'] = np.asarray(scannerOut['effsizes0'][0][(scannerOut['effsizes0'][0].shape[0])-1])
                     temp_df_snp['p_value'] = -1.0
@@ -637,7 +638,7 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
                     temp_df_snp['empirical_feature_p_value'] = -1.0
                     
                     temp_df_cov = pd.DataFrame(index = range(1),columns=['feature_id','snp_id','p_value','beta','beta_se','empirical_feature_p_value'])
-                    temp_df_cov['snp_id'] = G_index
+                    temp_df_cov['snp_id'] = snp_selection
                     temp_df_cov['feature_id'] = feature_id
                     temp_df_cov['beta'] = np.asarray(scannerOut['effsizes0'][0][np.where(covariate_df.columns==interaction_term)[0][0]])
                     temp_df_cov['p_value'] = -1.0
@@ -647,7 +648,7 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
                     
                     #add these results to qtl_results
                     temp_df = pd.DataFrame(index = range(1),columns=['feature_id','snp_id','p_value','beta','beta_se','empirical_feature_p_value'])
-                    temp_df['snp_id'] = G_index
+                    temp_df['snp_id'] = snp_selection
                     temp_df['feature_id'] = feature_id
                     temp_df['beta'] = np.asarray(effsizes)
                     temp_df['p_value'] = np.asarray(var_pvalues)
@@ -659,7 +660,7 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
                     if debugger:
                         fun_start = time.time()
                     if(n_perm!=0):
-                        snpForTest = snpForTest.to_frame(name=snp_df.columns[snp_selection])
+                        #snpForTest = snpForTest.to_frame(name=snp_selection)
                         pValueBuffer = []
                         totalSnpsToBeTested = (G.shape[1]*n_perm)
                         permutationStepSize = np.floor(n_perm/(totalSnpsToBeTested/blocksize))
@@ -667,21 +668,18 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
                             permutationStepSize=n_perm
                         elif(permutationStepSize<1):
                             permutationStepSize=1
-                        #pdb.set_trace()
                         if(write_permutations):
                             perm_df = pd.DataFrame(index = range(1),columns=['snp_id'] + ['permutation_'+str(x) for x in range(n_perm)])
                             perm_df['snp_id'] = G_index
                         for currentNperm in utils.chunker(list(range(1, n_perm+1)), permutationStepSize):
                             if kinship_df is not None:
-                                temp = utils.get_shuffeld_genotypes_preserving_kinship(geneticaly_unique_individuals, relatedness_score, snpForTest, kinship_df.loc[individual_ids,individual_ids], len(currentNperm))
+                                temp = pd.DataFrame(snpForTest.values,index=snpForTest.index,columns=[snp_selection])
+                                temp = utils.get_shuffled_interactions_preserving_kinship(temp, kinship_df, inter, geneticaly_unique_individuals, individual_ids, relatedness_score, sample2individual_feature, len(currentNperm))
                             else :
-                                temp = utils.get_shuffeld_genotypes(snpForTest, len(currentNperm))
-                            
-                            temp = temp.astype(float)
-                            for i in range(0,temp.shape[1]):
-                                temp[:,i] = temp[:,i] * inter.values
-                            #pdb.set_trace()
-                            scannerOut = flmm.fast_scan(temp, verbose=False)
+                                temp = pd.DataFrame(np.atleast_2d((snpForTest.values * inter.values).T).T,index=snpForTest.index,columns=[snp_selection])
+                                temp = utils.get_shuffeld_genotypes(temp, len(currentNperm))
+                            pdb.set_trace()
+                            scannerOut = flmm.fast_scan(temp.values, verbose=False)
                             alt_lmls_p = scannerOut['lml']
                             var_pvalues_p = utils.lrt_pvalues(null_lml, alt_lmls_p)
                             
