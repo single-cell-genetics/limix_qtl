@@ -675,6 +675,7 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
                             if kinship_df is not None:
                                 temp = pd.DataFrame(snpForTest.values,index=snpForTest.index,columns=[snp_selection])
                                 temp = utils.get_shuffled_interactions_preserving_kinship(temp, kinship_df, inter, geneticaly_unique_individuals, individual_ids, relatedness_score, sample2individual_feature, len(currentNperm))
+                                temp = temp.values
                             else :
                                 temp = pd.DataFrame(np.atleast_2d((snpForTest.values * inter.values).T).T,index=snpForTest.index,columns=[snp_selection])
                                 temp = utils.get_shuffeld_genotypes(temp, len(currentNperm))
