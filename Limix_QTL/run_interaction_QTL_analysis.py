@@ -680,7 +680,7 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
                                 temp = pd.DataFrame(np.atleast_2d((snpForTest.values * inter.values).T).T,index=snpForTest.index,columns=[snp_selection])
                                 temp = utils.get_shuffeld_genotypes(temp, len(currentNperm))
                             #pdb.set_trace()
-                            scannerOut = flmm.fast_scan(temp.values, verbose=False)
+                            scannerOut = flmm.fast_scan(temp, verbose=False)
                             alt_lmls_p = scannerOut['lml']
                             var_pvalues_p = utils.lrt_pvalues(null_lml, alt_lmls_p)
                             
