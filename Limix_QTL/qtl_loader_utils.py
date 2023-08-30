@@ -100,13 +100,13 @@ def get_genotype_data(geno_prefix, plinkGenotype):
     return bim,fam,bed,bgen
 
 def get_annotation_df(anno_filename):
-    annotation_col_dtypes = {'feature_id':np.object,
-                         'gene_id':np.object,
-                         'gene_name':np.object,
-                         'chromosome':np.object,
+    annotation_col_dtypes = {'feature_id':str,
+                         'gene_id':str,
+                         'gene_name':str,
+                         'chromosome':str,
                          'start':np.int64,
                          'end':np.int64,
-                         'strand':np.object}
+                         'strand':str}
     annotation_df = pd.read_csv(anno_filename,sep='\t',index_col=0,dtype=annotation_col_dtypes)
     return annotation_df
 
