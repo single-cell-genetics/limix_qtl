@@ -486,7 +486,7 @@ def merge_QTL_results(results_dir):
     hdf5_outfile.close()
 
 def chunker(seq, size):
-    return (seq[pos:pos + np.int(size)] for pos in range(0, len(seq), np.int(size)))
+    return (seq[pos:pos + int(size)] for pos in range(0, len(seq), int(size)))
 
 def get_unique_genetic_samples(kinship_df, relatedness_score):
 #    tril returns the lower triungular.
@@ -580,7 +580,7 @@ def get_shuffeld_genotypes_preserving_kinship(genetically_unique_individuals, re
     
         '''has replicates but not same lines form donor (np.setdiff1d(individual_ids,genetically_unique_individuals))'''
         #Shuffle and reinflate
-        locationBuffer = np.zeros(snp_matrix_DF.shape[0], dtype=np.int)
+        locationBuffer = np.zeros(snp_matrix_DF.shape[0], dtype=int)
         #Prepare location search for permuted snp_matrix_df.
         index_samples = np.arange(u_snp_matrix.shape[0])
         for index,current_name in enumerate(genetically_unique_individuals):
@@ -621,7 +621,7 @@ def get_shuffled_interactions_preserving_kinship(snp_matrix_DF, kinship_df1, int
         '''has replicates but not same lines form donor (np.setdiff1d(individual_ids,genetically_unique_individuals))'''
         #pdb.set_trace()
         #Shuffle and reinflate.
-        locationBuffer = np.zeros(temp.shape[0], dtype=np.int)
+        locationBuffer = np.zeros(temp.shape[0], dtype=int)
         #Prepare location search for permuted snp_matrix_df.
         index_samples = np.arange(u_snp_matrix.shape[0])
         
