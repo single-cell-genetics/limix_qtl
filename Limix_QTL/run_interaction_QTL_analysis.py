@@ -662,6 +662,8 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
                     if(n_perm!=0):
                         #snpForTest = snpForTest.to_frame(name=snp_selection)
                         pValueBuffer = []
+                        if(write_zscore):
+                            zScoreBuffer = []
                         totalSnpsToBeTested = (G.shape[1]*n_perm)
                         permutationStepSize = np.floor(n_perm/(totalSnpsToBeTested/blocksize))
                         if(permutationStepSize>n_perm):
