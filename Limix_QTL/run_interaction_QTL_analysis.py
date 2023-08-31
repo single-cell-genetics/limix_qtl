@@ -670,7 +670,7 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
                             permutationStepSize=1
                         if(write_permutations):
                             perm_df = pd.DataFrame(index = range(1),columns=['snp_id'] + ['permutation_'+str(x) for x in range(n_perm)])
-                            perm_df['snp_id'] = G_index
+                            perm_df['snp_id'] = snp_selection
                         for currentNperm in utils.chunker(list(range(1, n_perm+1)), permutationStepSize):
                             if kinship_df is not None:
                                 temp = pd.DataFrame(snpForTest.values,index=snpForTest.index,columns=[snp_selection])
