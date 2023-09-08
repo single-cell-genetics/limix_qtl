@@ -627,7 +627,7 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
                         print(" Actual scanning took {}".format(fun_end-fun_start))
                     #########################################################################################################################################################
                     #pdb.set_trace()
-                    #add these results to qtl_results
+                    #add these results to ults
                     temp_df_snp = pd.DataFrame(index = range(1),columns=['feature_id','snp_id','p_value','beta','beta_se','empirical_feature_p_value'])
                     temp_df_snp['snp_id'] = snp_selection
                     temp_df_snp['feature_id'] = feature_id
@@ -646,7 +646,7 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
                     #insert default dummy value
                     temp_df_cov['empirical_feature_p_value'] = -1.0
                     
-                    #add these results to qtl_results
+                    #add these results to ults
                     temp_df = pd.DataFrame(index = range(1),columns=['feature_id','snp_id','p_value','beta','beta_se','empirical_feature_p_value'])
                     temp_df['snp_id'] = snp_selection
                     temp_df['feature_id'] = feature_id
@@ -778,9 +778,13 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
         print("Trying to remove the h5 file. Nothing has been tested.")
         print(output_dir+'qtl_results_{}_{}_{}.h5'.format(chromosome,selectionStart,selectionEnd))
         if not selectionStart is None :
-            os.remove(output_dir+'qtl_results_{}_{}_{}.h5'.format(chromosome,selectionStart,selectionEnd))
+            os.remove(output_dir+'/iqtl_results_{}_{}_{}.h5'.format(chromosome,selectionStart,selectionEnd))
+            os.remove(output_dir+'/iqtl_results_snp_{}_{}_{}.h5'.format(chromosome,selectionStart,selectionEnd))
+            os.remove(output_dir+'/iqtl_results_cov_{}_{}_{}.h5'.format(chromosome,selectionStart,selectionEnd))
         else :
-            os.remove(output_dir+'qtl_results_{}.h5'.format(chromosome))
+            os.remove(output_dir+'/iqtl_results_{}.h5'.format(chromosome))
+            os.remove(output_dir+'/iqtl_results_snp_{}.h5'.format(chromosome))
+            os.remove(output_dir+'/iqtl_results_cov_{}.h5'.format(chromosome))
         sys.exit()
     #gather unique indexes of tested SNPs
 
