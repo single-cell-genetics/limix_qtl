@@ -548,8 +548,6 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
                     #print(snp_selection)
                     #pdb.set_trace()
                     snpForTest = snp_df.loc[individual_ids,snp_selection].copy(deep=True)
-                    if (not plinkGenotype):
-                        snpForTest = snp_df_dosage.loc[individual_ids,snp_selection].copy(deep=True)
                     
                     cov_matrix_snp = np.column_stack((cov_matrix, snpForTest))
                     
