@@ -88,11 +88,6 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
         output_writer = qtl_output.hdf5_writer(output_dir+'/qtl_results_{}_{}_{}.h5'.format(chromosome,selectionStart,selectionEnd))
     else :
         output_writer = qtl_output.hdf5_writer(output_dir+'/qtl_results_{}.h5'.format(chromosome))
-    #if(write_permutations):
-    #    if not selectionStart is None :
-    #        permutation_writer = qtl_output.hdf5_permutations_writer(output_dir+'/perm_results_{}_{}_{}.h5'.format(chromosome,selectionStart,selectionEnd),n_perm)
-    #    else :
-    #        permutation_writer = qtl_output.hdf5_permutations_writer(output_dir+'/perm_results_{}.h5'.format(chromosome),n_perm)
     if debugger:
         fun_end = time.time()
         print(" Opening writing files took {}".format(fun_end-fun_start))
@@ -274,7 +269,7 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                 continue
             #####################################################################################################################################################
 
-            print ('For feature: ' +str(currentFeatureNumber)+ '/'+str(len(feature_list))+ ' (' + feature_id + '): ' + str(snpQuery.shape[0]) + ' SNPs need to be tested.\n Please stand by.')
+            print ('For feature: ' +str(currentFeatureNumber)+ '/'+str(len(feature_list))+ ' (' + feature_id + '): ' + str(snpQuery.shape[0]) + ' SNPs need to be tested.\n Please stand by.', flush = True)
 
             ##########################################################################################################################################################
             # SNP TESTING
@@ -668,17 +663,16 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                     output_writer.add_result_df(temp_df)
                     ##Here we can calculate only the relenvant entries and save the mean + variance.
                     #pdb.set_trace()
-                    tmp_df = pd.concat([perm_df.iloc[:,1:].mean(axis=1), perm_df.iloc[:,1:].std(axis=1)], axis=1)
-                    tmp_df.index = perm_df['snp_id']
-                    tmp_df.columns = columns=['Mean','Sd']
-                    ##Add to feature level information.
-                    if perm_summary_df is None:
-                        perm_summary_df = tmp_df.copy(deep=True)
-                    else:
-                        perm_summary_df = pd.concat([perm_summary_df, tmp_df], axis=0, sort = False)
-                    
-                    #if(write_permutations):
-                    #    permutation_writer.add_permutation_results_df(perm_df,feature_id)
+                    if(write_permutations):
+                        tmp_df = pd.concat([perm_df.iloc[:,1:].mean(axis=1), perm_df.iloc[:,1:].std(axis=1)], axis=1)
+                        tmp_df.index = perm_df['snp_id']
+                        tmp_df.columns = columns=['Mean','Sd']
+                        ##Add to feature level information.
+                        if perm_summary_df is None:
+                            perm_summary_df = tmp_df.copy(deep=True)
+                        else:
+                            perm_summary_df = pd.concat([perm_summary_df, tmp_df], axis=0, sort = False)
+
                 if debugger:
                     fun_end = time.time()
                     print(" Permutations took {}".format(fun_end-fun_start))
@@ -700,8 +694,9 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
                 beta_params.append(beta_para)
             if randomeff_mix :
                 random_eff_param.append(feature_best_rho)
-            ##Here we need to store a file per feature for the permutation distribution, and go to 32 bit for storage size.
-            perm_summary_df.astype('float32').to_pickle(output_dir+'/Permutation_information_{}.pickle.gz'.format(feature_id.replace("/","-")))
+            if(write_permutations):
+                ##Here we need to store a file per feature for the permutation distribution, and go to 32 bit for storage size.
+                perm_summary_df.astype('float32').to_pickle(output_dir+'/Permutation_information_{}.pickle.gz'.format(feature_id.replace("/","-")))
         
         if contains_missing_samples:
             QS = None
@@ -733,8 +728,6 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
 
     output_writer.close()
 
-    #if(write_permutations):
-    #    permutation_writer.close()
     fail_qc_features = np.unique(fail_qc_features)
     if((len(feature_list)-len(fail_qc_features))==0):
         time.sleep(15)
@@ -857,17 +850,19 @@ if __name__=='__main__':
         raise ValueError("At least one run mode (-c / -t) is needed.")
     if (random_seed is None):
         random_seed = np.random.randint(40000)
-    if(n_perm==0 and write_permutations):
-        write_permutations=False
 
     if(n_perm==1):
         print("Warning: With only 1 permutation P-value correction is not performed.")
     if(n_perm<50):
         print("Warning: With less than 50 permutations P-values correction is not very accurate.")
         
-    #For this version designed for the metaAnalysis framework in sc-eQTLGen we always use Z-scores & write out Gene (QTL) based summary information.
+    #For this version designed for the metaAnalysis framework in sc-eQTLGen we always use Z-scores & write out Gene (QTL) based summary information (unless specified as 0 perms).
     write_permutations = True
     write_zscore = True
+    
+    if(n_perm==0 and write_permutations):
+        write_permutations=False
+    
 
     run_QTL_analysis(pheno_file, anno_file,geno_prefix, plinkGenotype, output_dir, int(window_size),
                      min_maf=float(min_maf), min_hwe_P=float(min_hwe_P), min_call_rate=float(min_call_rate), blocksize=int(block_size),

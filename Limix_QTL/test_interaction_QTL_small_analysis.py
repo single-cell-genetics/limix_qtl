@@ -6,7 +6,7 @@ from qtl_utilities import merge_QTL_results
 import subprocess
 import numpy as np
 import pandas as pd
-import pytest
+#import pytest
 
 def hdf5_results_checking(filename,fun=lambda df: np.mean(df['beta']) ):
     '''For a given hdf5 results file, returns a value derived from the first dataframe

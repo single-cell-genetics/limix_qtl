@@ -185,12 +185,13 @@ def run_QTL_analysis_load_intersect_phenotype_covariates_kinship_sample_mapping(
             feature_filter_df=pd.DataFrame(index=feature_filename)
     #Do filtering on features.
     if feature_filter_df is not None:
-        feature_lst = set(phenotype_df.index).intersection(feature_filter_df.index)
-        phenotype_df = phenotype_df.loc[feature_lst,:]
+        lst3 = list(set(phenotype_df.index.values).intersection(feature_filter_df.index.values))
+        phenotype_df = phenotype_df.loc[lst3,:]
         ##Filtering on features to test.
     if snp_feature_filter_df is not None:
-        lst3 = set(phenotype_df.index).intersection(np.unique(snp_feature_filter_df['feature_id']))
+        lst3 = list(set(phenotype_df.index).intersection(np.unique(snp_feature_filter_df['feature_id'])))
         phenotype_df = phenotype_df.loc[lst3,:]
+        snp_feature_filter_df = snp_feature_filter_df.loc[snp_feature_filter_df["feature_id"].isin(lst3),:]
         ##Filtering on features  to test from the combined feature snp filter.
 
     if ((not cis_mode) and len(set(bim['chrom']))<22) :
@@ -210,6 +211,7 @@ def run_QTL_analysis_load_intersect_phenotype_covariates_kinship_sample_mapping(
     if snp_feature_filter_df is not None:
         toSelect = set(np.unique(snp_feature_filter_df['snp_id'])).intersection(set(bim['snp']))
         bim = bim.loc[bim['snp'].isin(toSelect)]
+        snp_feature_filter_df = snp_feature_filter_df.loc[snp_feature_filter_df["snp_id"].isin(toSelect),:]
         ##Filtering on features  to test from the combined feature snp filter.
 
     #Filtering for sites on non allosomes.
@@ -230,6 +232,9 @@ def run_QTL_analysis_load_intersect_phenotype_covariates_kinship_sample_mapping(
             feature_list = list(set(annotation_df[annotation_df['chromosome']==chromosome].index)&set(phenotype_df.index))
     #Drop not used feature information.
     phenotype_df = phenotype_df.loc[feature_list,:]
+    annotation_df = annotation_df.loc[feature_list,:]
+    if not snp_feature_filter_df is None :
+        snp_feature_filter_df = snp_feature_filter_df.loc[snp_feature_filter_df["feature_id"].isin(feature_list),:]
     gc.collect()
     print("Number of features to be tested: " + str(len(feature_list)))
     print("Total number of variants to be considered, before variante QC and feature intersection: " + str(bim.shape[0]))
@@ -243,6 +248,7 @@ def run_QTL_analysis_load_intersect_phenotype_covariates_kinship_sample_mapping(
         annotation_df['index']=annotation_df.index
         complete_annotation_df['index']=complete_annotation_df.index
         complete_annotation_df = pd.concat([annotation_df,complete_annotation_df]).drop_duplicates()
+        complete_annotation_df = complete_annotation_df.loc[feature_list,:]
         del complete_annotation_df['index']
     else:
         complete_annotation_df = annotation_df

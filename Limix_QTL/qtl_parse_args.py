@@ -77,7 +77,7 @@ def get_interaction_args():
     parser.add_argument('--interaction_term','-it',
                         help=
                         'Term to use for the interaction analysis, values are extracted from the covariate matrix.'
-                        'The interaction term is also taken along in the covariate matrix.',required=True,default=None)
+                        'The interaction term is also taken along in the covariate matrix.',required=True)
     parser.add_argument('--window','-w', required=False,
                         help=
                         'The size of the cis window to take SNPs from.'
