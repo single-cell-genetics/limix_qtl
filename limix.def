@@ -1,5 +1,6 @@
 Bootstrap: docker
-From: continuumio/miniconda3
+#From: continuumio/miniconda3
+From: continuumio/miniconda3:4.12.0
 ######################## Limix based QTL mapping ###########################
 %runscript
     export PATH=/opt/conda/bin:${PATH}
@@ -11,8 +12,9 @@ From: continuumio/miniconda3
     conda package
     conda config --add channels conda-forge
     # Install C & Python packages with conda.
-    conda install -c conda-forge python=3.8 'blas=*=*mkl' 'numpy>=1.21' pytest pytables scikit-learn matplotlib-venn bgen=4 pandas-plink h5py
+    conda install -c conda-forge 'blas=*=*mkl' 'numpy==1.21' pytest pytables scikit-learn matplotlib-venn bgen=4 pandas-plink
     # Install remaining Python packages with pip
+    pip install --no-cache-dir h5py
     pip install bgen-reader
     pip install glimix-core
     # Install R

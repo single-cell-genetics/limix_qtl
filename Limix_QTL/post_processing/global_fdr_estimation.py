@@ -49,7 +49,7 @@ def add_global_fdr_measures(QTL_Dir, OutputDir, relevantGenes, qtl_results_file=
         genesTested +=1
     nPerm = len(pValueBuffer)/genesTested
     
-    pValueBuffer=np.float_(pValueBuffer)
+    pValueBuffer=np.float64(pValueBuffer)
     alpha_para, beta_para = estimate_beta_function_paras(pValueBuffer)
     beta_dist_mm = scipy.stats.beta(alpha_para,beta_para)
     correction_function_beta = lambda x: beta_dist_mm.cdf(x)
