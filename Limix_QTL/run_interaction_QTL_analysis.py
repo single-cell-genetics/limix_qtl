@@ -628,6 +628,7 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
                     #########################################################################################################################################################
                     #pdb.set_trace()
                     #add these results to qtl_results
+
                     temp_df_snp = pd.DataFrame(index = range(1),columns=['feature_id','snp_id','p_value','beta','beta_se','empirical_feature_p_value'])
                     temp_df_snp['snp_id'] = snp_selection
                     temp_df_snp['feature_id'] = feature_id
@@ -646,7 +647,6 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
                     #insert default dummy value
                     temp_df_cov['empirical_feature_p_value'] = -1.0
                     
-                    #add these results to qtl_results
                     temp_df = pd.DataFrame(index = range(1),columns=['feature_id','snp_id','p_value','beta','beta_se','empirical_feature_p_value'])
                     temp_df['snp_id'] = snp_selection
                     temp_df['feature_id'] = feature_id
