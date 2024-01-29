@@ -185,7 +185,8 @@ def run_QTL_analysis_load_intersect_phenotype_covariates_kinship_sample_mapping(
             feature_filter_df=pd.DataFrame(index=feature_filename)
     #Do filtering on features.
     if feature_filter_df is not None:
-        phenotype_df = phenotype_df.loc[feature_filter_df.index,:]
+        feature_lst = set(phenotype_df.index).intersection(feature_filter_df.index)
+        phenotype_df = phenotype_df.loc[feature_lst,:]
         ##Filtering on features to test.
     if snp_feature_filter_df is not None:
         lst3 = set(phenotype_df.index).intersection(np.unique(snp_feature_filter_df['feature_id']))
