@@ -33,9 +33,12 @@ def minimal_qtl_processing(QTL_Dir, OutputDir, writeToOneFile=True, compressed =
             outputFile = OutputDir+output_file+"all.txt"
         else:
             outputFile = OutputDir+output_file+partTmp+".txt"
-
+        
+        if compressed:
+            outputFile = outputFile+".gz"
+        
         #print(outputFile)
-        if(((os.path.isfile(outputFile) or os.path.isfile(outputFile+".gz")) and not overWrite) and not writeToOneFile):
+        if((os.path.isfile(outputFile) and not overWrite) and not writeToOneFile):
             #print("Skipping: "+partTmp)
             continue
         #else :
@@ -56,7 +59,7 @@ def minimal_qtl_processing(QTL_Dir, OutputDir, writeToOneFile=True, compressed =
                 
         if not os.path.isfile(QTL_Dir+"/"+feature_metadata_file+partTmp+".txt") and not os.path.isfile(QTL_Dir+"/"+feature_metadata_file+partTmp+".txt.gz"):
             print("Skipping: " +partTmp + " not all necessary files are present.")
-            continue    
+            continue
         try :
             #print(QTL_Dir+"/"+snp_metadata_file+partTmp+".txt")
             fsnp= pd.read_table(QTL_Dir+"/"+snp_metadata_file+partTmp+".txt", sep='\t')
@@ -70,7 +73,7 @@ def minimal_qtl_processing(QTL_Dir, OutputDir, writeToOneFile=True, compressed =
         ffea = ffea.rename(index=str, columns={"chromosome": "feature_chromosome", "start": "feature_start", "end": "feature_end"})
         fsnp = fsnp.rename(index=str, columns={"chromosome": "snp_chromosome", "position": "snp_position"})
 
-
+        
         frez=h5py.File(file,'r')
         frezkeys= np.array([k.replace('_i_','') for k in list(frez.keys())])
 
@@ -93,8 +96,7 @@ def minimal_qtl_processing(QTL_Dir, OutputDir, writeToOneFile=True, compressed =
 
         temp = pd.merge(temp, ffea, on='feature_id', how='left')
 
-
-        if(len(glob.glob(QTL_Dir+'snp_qc_metrics_naContaining_feature_*.txt'))>0):
+        if(len(glob.glob(QTL_Dir+'snp_qc_metrics_naContaining_feature_*.txt*'))>0):
             ##Here we need to check, we can based on the output of glob do this quicker.
             temp2 = pd.DataFrame(columns=temp.columns)
             for key in frezkeys:
@@ -135,7 +137,7 @@ def minimal_qtl_processing(QTL_Dir, OutputDir, writeToOneFile=True, compressed =
         if(not compressed):
             temp.to_csv(path_or_buf=outputFile, mode='w'if not os.path.isfile(outputFile) else 'a', sep='\t', columns=None,index=None, header= True if not os.path.isfile(outputFile) else False)
         else:
-            temp.to_csv(path_or_buf=outputFile+".gz", mode='w'if not os.path.isfile(outputFile) else 'a', sep='\t', columns=None,index=None,compression='gzip', header= True if not os.path.isfile(outputFile) else False )
+            temp.to_csv(path_or_buf=outputFile, mode='w'if not os.path.isfile(outputFile) else 'a', sep='\t', columns=None,index=None,compression='gzip', header= True if not os.path.isfile(outputFile) else False )
         wroteData = True
     
     if writeToOneFile and not wroteData:

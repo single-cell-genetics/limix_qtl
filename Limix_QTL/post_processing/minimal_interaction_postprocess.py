@@ -45,8 +45,11 @@ def minimal_iqtl_processing(QTL_Dir, OutputDir, writeToOneFile=True, compressed 
         else:
             outputFile = OutputDir+output_file+partTmp+".txt"
 
+        if compressed:
+            outputFile = outputFile+".gz"
+        
         #print(outputFile)
-        if(((os.path.isfile(outputFile) or os.path.isfile(outputFile+".gz")) and not overWrite) and not writeToOneFile):
+        if((os.path.isfile(outputFile) and not overWrite) and not writeToOneFile):
             #print("Skipping: "+partTmp)
             continue
         #else :
@@ -68,7 +71,7 @@ def minimal_iqtl_processing(QTL_Dir, OutputDir, writeToOneFile=True, compressed 
                 
         if not os.path.isfile(QTL_Dir+"/"+feature_metadata_file+partTmp+".txt") and not os.path.isfile(QTL_Dir+"/"+feature_metadata_file+partTmp+".txt.gz"):
             print("Skipping: " +partTmp + " not all necessary files are present.")
-            continue    
+            continue
         try :
             #print(QTL_Dir+"/"+snp_metadata_file+partTmp+".txt")
             fsnp= pd.read_table(QTL_Dir+"/"+snp_metadata_file+partTmp+".txt", sep='\t')
@@ -186,7 +189,7 @@ def minimal_iqtl_processing(QTL_Dir, OutputDir, writeToOneFile=True, compressed 
         if(not compressed):
             temp.to_csv(path_or_buf=outputFile, mode='w'if not os.path.isfile(outputFile) else 'a', sep='\t', columns=None,index=None, header= True if not os.path.isfile(outputFile) else False)
         else:
-            temp.to_csv(path_or_buf=outputFile+".gz", mode='w'if not os.path.isfile(outputFile) else 'a', sep='\t', columns=None,index=None,compression='gzip', header= True if not os.path.isfile(outputFile) else False )
+            temp.to_csv(path_or_buf=outputFile, mode='w'if not os.path.isfile(outputFile) else 'a', sep='\t', columns=None,index=None,compression='gzip', header= True if not os.path.isfile(outputFile) else False )
         wroteData = True
     
     if writeToOneFile and not wroteData:

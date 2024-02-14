@@ -43,28 +43,42 @@ def minimal_qtl_processing(QTL_Dir, OutputDir, featureGroupFile, cis_mode, write
             outputFile = OutputDir+output_file+"all.txt"
         else:
             outputFile = OutputDir+output_file+partTmp+".txt"
-
+        
+        if compressed:
+            outputFile = outputFile+".gz"
+        
         #print(outputFile)
-        if(((os.path.isfile(outputFile) or os.path.isfile(outputFile+".gz")) and not overWrite) and not writeToOneFile):
+        if((os.path.isfile(outputFile) and not overWrite) and not writeToOneFile):
             #print("Skipping: "+partTmp)
             continue
         #else :
             #print('Processing: '+partTmp)
         #print(partTmp)
-        if not os.path.isfile(QTL_Dir+"/"+snp_metadata_file+partTmp+".txt"):
-            print("Skipping: " +partTmp + " not all necessary files are present.")
-            continue
-        if not os.path.isfile(QTL_Dir+"/"+feature_metadata_file+partTmp+".txt"):
+        if not os.path.isfile(QTL_Dir+"/"+snp_metadata_file+partTmp+".txt") and not os.path.isfile(QTL_Dir+"/"+snp_metadata_file+partTmp+".txt.gz"):
             print("Skipping: " +partTmp + " not all necessary files are present.")
             continue
         try :
             #print(QTL_Dir+"/"+feature_metadata_file+partTmp+".txt")
-            #print(QTL_Dir+"/"+snp_metadata_file+partTmp+".txt")
             ffea= pd.read_table(QTL_Dir+"/"+feature_metadata_file+partTmp+".txt", sep='\t')
+        except :
+            try :
+                ffea= pd.read_table(QTL_Dir+"/"+feature_metadata_file+partTmp+".txt.gz", sep='\t')
+            except :
+                print("Issue in features annotation.\n Skipping: "+partTmp)
+                continue
+                
+        if not os.path.isfile(QTL_Dir+"/"+feature_metadata_file+partTmp+".txt") and not os.path.isfile(QTL_Dir+"/"+feature_metadata_file+partTmp+".txt.gz"):
+            print("Skipping: " +partTmp + " not all necessary files are present.")
+            continue
+        try :
+            #print(QTL_Dir+"/"+snp_metadata_file+partTmp+".txt")
             fsnp= pd.read_table(QTL_Dir+"/"+snp_metadata_file+partTmp+".txt", sep='\t')
         except:
-            print("Issue in features or snp annotation.\n Skipping: "+partTmp)
-            continue
+            try:
+                fsnp= pd.read_table(QTL_Dir+"/"+snp_metadata_file+partTmp+".txt.gz", sep='\t')
+            except :
+                print("Issue in snp annotation.\n Skipping: "+partTmp)
+                continue
         
         ffea = ffea.rename(index=str, columns={"chromosome": "feature_chromosome", "start": "feature_start", "end": "feature_end"})
         fsnp = fsnp.rename(index=str, columns={"chromosome": "snp_chromosome", "position": "snp_position"})
@@ -165,7 +179,7 @@ def minimal_qtl_processing(QTL_Dir, OutputDir, featureGroupFile, cis_mode, write
         if(not compressed):
             data.to_csv(path_or_buf=outputFile, mode='w'if not os.path.isfile(outputFile) else 'a', sep='\t', columns=None,index=None, header= True if not os.path.isfile(outputFile) else False)
         else:
-            data.to_csv(path_or_buf=outputFile+".gz", mode='w'if not os.path.isfile(outputFile) else 'a', sep='\t', columns=None,index=None,compression='gzip', header= True if not os.path.isfile(outputFile) else False )
+            data.to_csv(path_or_buf=outputFile, mode='w'if not os.path.isfile(outputFile) else 'a', sep='\t', columns=None,index=None,compression='gzip', header= True if not os.path.isfile(outputFile) else False )
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Run QTL analysis given genotype, phenotype, and annotation.')
