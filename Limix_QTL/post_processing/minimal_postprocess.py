@@ -134,10 +134,14 @@ def minimal_qtl_processing(QTL_Dir, OutputDir, writeToOneFile=True, compressed =
         #print(outputFile)#
         #temp.to_csv(path_or_buf=outputFile, mode='w', sep='\t', columns=None,index=None)
         #print('w'if not os.path.isfile(outputFile) else 'a')
-        if(not compressed):
-            temp.to_csv(path_or_buf=outputFile, mode='w'if not os.path.isfile(outputFile) else 'a', sep='\t', columns=None,index=None, header= True if not os.path.isfile(outputFile) else False)
+        
+        outputFileExists = os.path.isfile(outputFile)
+        writeMode = 'w' if not outputFileExists else 'a'
+        writeHeader = True if not outputFileExists else False
+        if(compressed):
+            temp.to_csv(path_or_buf=outputFile, mode=writeMode, sep='\t', columns=None,index=None, header=writeHeader,compression='gzip')
         else:
-            temp.to_csv(path_or_buf=outputFile, mode='w'if not os.path.isfile(outputFile) else 'a', sep='\t', columns=None,index=None,compression='gzip', header= True if not os.path.isfile(outputFile) else False )
+            temp.to_csv(path_or_buf=outputFile, mode=writeMode, sep='\t', columns=None,index=None, header=writeHeader)
         wroteData = True
     
     if writeToOneFile and not wroteData:

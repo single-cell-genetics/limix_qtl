@@ -95,7 +95,7 @@ def get_genotype_data(geno_prefix, plinkGenotype):
         bim['chrom'].replace(['X', 'Y', 'XY', 'MT'], ['23', '24', '25', '26'],inplace=True)
         ##Remove non-biallelic & non-ploidy 2 (to be sure). (These can't happen in binary plink files).
         print("Warning, the current software only supports biallelic SNPs and ploidy 2")
-        bim.loc[np.logical_and(bim['nalleles']<3,bim['nalleles']>0),:]
+        bim = bim.loc[np.logical_and(bim['nalleles']<3,bim['nalleles']>0),:]
     
     return bim,fam,bed,bgen
 

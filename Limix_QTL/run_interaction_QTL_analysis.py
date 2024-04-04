@@ -29,7 +29,9 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
                                  seed=np.random.randint(40000), n_perm=0, write_permutations = False, write_zscore = False, write_feature_top_permutations = False,
                                  relatedness_score=0.95, feature_variant_covariate_filename = None, snps_filename=None, feature_filename=None, 
                                  snp_feature_filename=None, genetic_range='all', covariates_filename=None, randomeff_filename=None, 
-                                 sample_mapping_filename=None, extended_anno_filename=None, regressCovariatesUpfront = False, lr_random_effect = False, debugger=False, regres_snp_from_env=False):
+                                 sample_mapping_filename=None, extended_anno_filename=None, regressCovariatesUpfront = False, lr_random_effect = False, 
+                                 debugger=False, regres_snp_from_env=False, add_interaction_on_covariates=False):
+    
     if debugger:
         fun_start = time.time()
     
@@ -165,8 +167,8 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
 
         ########################################################################################################################################################
         # check if enough phenotype samples to test this gene
-        if (len(phenotype_df.loc[feature_id,:]))<minimum_test_samples:
-            print("Feature: "+feature_id+" not tested not enough samples do QTL test (n="+str(len(phenotype_df.loc[feature_id,:]))+").")
+        if sum(~np.isnan(phenotype_df.loc[feature_id,:])) < minimum_test_samples:
+            print("Feature: "+feature_id+" not tested not enough samples do QTL test (n="+str(sum(~np.isnan(phenotype_df.loc[feature_id,:])))+").")
             fail_qc_features.append(feature_id)
             geneticaly_unique_individuals = tmp_unique_individuals
             continue
@@ -399,18 +401,16 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
                 # covariance matrix setting
                 cov_matrix =  covariate_df.loc[sample2individual_feature['sample'],:] if covariate_df is not None else None
                 inter = cov_matrix.loc[:,interaction_term]
-                cov_matrix =  cov_matrix.values
-                cov_matrix = cov_matrix.astype(float)
+                
                 if snp_cov_df is not None:
                     snp_cov_df_tmp = snp_cov_df.loc[individual_ids,:]
                     snp_cov_df_tmp.index=sample2individual_feature['sample']
                     snp_cov_df = pd.DataFrame(fill_NaN.fit_transform(snp_cov_df_tmp))
                     snp_cov_df.index=snp_cov_df_tmp.index
                     snp_cov_df.columns=snp_cov_df_tmp.columns
-                    cov_matrix = np.concatenate((cov_matrix,snp_cov_df.values),1)
+                    cov_matrix = pd.concat((cov_matrix,snp_cov_df),axis=1)
                     snp_cov_df_tmp = None
                     snp_cov_df = None
-                cov_matrix = cov_matrix.astype(float)
                 #######################################################################################################################################################
             else:
                 print ('There is an issue in mapping phenotypes vs covariates and/or kinship and/or second random effect term.')
@@ -520,8 +520,10 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
                     snpQcInfo = snpQcInfo_t
                 elif snpQcInfo_t is not None:
                     snpQcInfo = pd.concat([snpQcInfo, snpQcInfo_t], axis=0, sort = False)
-                ##First process SNPQc than check if si can continue.
+                ##First process SNPQc then check if it can continue.
                 if len(snp_df.columns) == 0:
+                    if debugger:
+                        print("No SNPs to be tested")
                     continue
                 ##If we use bgen we replace the genotypes here to only have the dosage matrix in mem. Trying to save some memory.
                 if (not plinkGenotype):
@@ -551,10 +553,20 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
                     if (not plinkGenotype):
                         snpForTest = snp_df_dosage.loc[individual_ids,snp_selection].copy(deep=True)
                     
-                    cov_matrix_snp = np.column_stack((cov_matrix, snpForTest))
+                    #pdb.set_trace()
+                    if add_interaction_on_covariates :
+                        tmpMat = cov_matrix.loc[:, cov_matrix.columns != interaction_term]
+                        tmpMat = tmpMat.loc[:, tmpMat.columns != 'ones']
+                        tmpMat * snpForTest
+                        tmpMat = tmpMat.values * snpForTest[:, np.newaxis]
+                        tmpMat = np.column_stack((cov_matrix.values, tmpMat))
+                        cov_matrix_snp = np.column_stack((tmpMat, snpForTest))
+                    else:
+                        cov_matrix_snp = np.column_stack((cov_matrix.values, snpForTest)) ##This works
                     
                     ##########################################################################################################################################################
                     # Computing Null Model per SNP (needed for interaction tests)
+                    
                     if debugger:
                         fun_start = time.time()
                     if randomeff_mix:
@@ -583,7 +595,7 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
                     ##########################################################################################################################################################
                     
                     ##########################################################################################################################################################
-                    # Regressing up covariates
+                    # Regressing covariates before testing
                     if debugger:
                         fun_start = time.time()
                     if regressCovariatesUpfront:
@@ -879,6 +891,7 @@ if __name__=='__main__':
     regressBefore = args.regress_covariates
     write_feature_top_permutations = args.write_feature_top_permutations
     lr_random_effect = args.low_rank_random_effect
+    interactionOnCovariates = args.interaction_covariates
     debugger = args.debugger
 
     if ((plink is None) and (bgen is None)):
@@ -915,4 +928,4 @@ if __name__=='__main__':
                      cis_mode=cis, skipAutosomeFiltering= includeAllChromsomes, gaussianize_method = gaussianize, minimum_test_samples= int(minimum_test_samples), seed=int(random_seed), 
                      n_perm=int(n_perm), write_permutations = write_permutations, write_zscore = write_zscore, write_feature_top_permutations = write_feature_top_permutations, relatedness_score=relatedness_score, feature_variant_covariate_filename = feature_variant_covariate_filename,
                      snps_filename=snps_filename, feature_filename=feature_filename, snp_feature_filename=snp_feature_filename, genetic_range=genetic_range, covariates_filename=covariates_file,
-                     randomeff_filename=randeff_file, sample_mapping_filename=samplemap_file, extended_anno_filename=extended_anno_file, regressCovariatesUpfront = regressBefore, lr_random_effect = lr_random_effect, debugger= debugger, regres_snp_from_env = regress_out_snp_from_env)
+                     randomeff_filename=randeff_file, sample_mapping_filename=samplemap_file, extended_anno_filename=extended_anno_file, regressCovariatesUpfront = regressBefore, lr_random_effect = lr_random_effect, debugger= debugger, regres_snp_from_env = regress_out_snp_from_env, add_interaction_on_covariates = interactionOnCovariates)

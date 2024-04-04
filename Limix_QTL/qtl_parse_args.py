@@ -75,19 +75,17 @@ def get_interaction_args():
     parser.add_argument('--phenotype_file','-pf', required=True)
     parser.add_argument('--output_directory','-od', required=True)
     parser.add_argument('--interaction_term','-it',
-                        help=
-                        'Term to use for the interaction analysis, values are extracted from the covariate matrix.'
+                        help= 'Term to use for the interaction analysis, values are extracted from the covariate matrix.'
                         'The interaction term is also taken along in the covariate matrix.',required=True)
+    parser.add_argument('--interaction_covariates','-ic',action="store_true", help= 'Add interaction effects on each of the covariates supplied.', required=False,default=False)
     parser.add_argument('--window','-w', required=False,
-                        help=
-                        'The size of the cis window to take SNPs from.'
+                        help= 'The size of the cis window to take SNPs from.'
                         'The window will extend between:                     '
                         '    (feature_start - (window))             '
                         ' and:                                               '
                         '    (feature_end + (window))               ',default=250000)
     parser.add_argument('--genomic_range','-gr',required=False,
-                        help=
-                        'A genomic range to do selecte features to be considered in the analysis.'
+                        help= 'A genomic range to do selecte features to be considered in the analysis.'
                         'Available options: all (default), a chromsome or chromosome:start-end.',default='all')
     parser.add_argument('--covariates_file','-cf',required=True,default=None)
     parser.add_argument('--randomeff_files','-rf',required=False,default=None,
@@ -105,8 +103,7 @@ def get_interaction_args():
     parser.add_argument('--feature_filter','-ff',required=False,default=None)
     parser.add_argument('--seed','-s',required=False)
     parser.add_argument('--extended_annotation_file','-eaf',
-                        help=
-                        'Secondary annotation file, to add a multiple locations to one feature.'
+                        help= 'Secondary annotation file, to add a multiple locations to one feature.'
                         'This can be used to either link multiple test regions to one feature or exclude multiple regions while testing a feature.', required=False)
     parser.add_argument('--regress_snp_interaction','-rsi', action="store_true",required=False,default=False)
     parser.add_argument("--regress_covariates","-rc",
