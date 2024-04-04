@@ -156,8 +156,8 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
 
         ########################################################################################################################################################
         # check if enough phenotype samples to test this gene
-        if (len(phenotype_df.loc[feature_id,:]))<minimum_test_samples:
-            print("Feature: "+feature_id+" not tested not enough samples do QTL test (n="+str(len(phenotype_df.loc[feature_id,:]))+").")
+        if sum(~np.isnan(phenotype_df.loc[feature_id,:])) <minimum_test_samples:
+            print("Feature: "+feature_id+" not tested not enough samples do QTL test (n="+str(sum(~np.isnan(phenotype_df.loc[feature_id,:])))+").")
             fail_qc_features.append(feature_id)
             geneticaly_unique_individuals = tmp_unique_individuals
             continue
