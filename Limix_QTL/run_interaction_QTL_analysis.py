@@ -528,7 +528,6 @@ def run_interaction_QTL_analysis(pheno_filename, anno_filename, geno_prefix, pli
                 ##If we use bgen we replace the genotypes here to only have the dosage matrix in mem. Trying to save some memory.
                 if (not plinkGenotype):
                     snp_df= snp_df_dosage.loc[:,np.unique(snp_df.columns)]
-                    snp_df_dosage = None
                 #We could make use of relatedness when imputing.  And impute only based on genetically unique individuals.
                 snp_df = pd.DataFrame(fill_NaN.fit_transform(snp_df),index=snp_df.index,columns=snp_df.columns)
                 ##No more snp_matrix_DF > snp_df
