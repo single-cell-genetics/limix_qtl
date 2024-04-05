@@ -8,7 +8,7 @@ import glob
 import pdb
 from pathlib import Path
 
-def minimal_qtl_processing(QTL_Dir, OutputDir, writeToOneFile=True, compressed = False, overWrite=True, minimalPValue = 1, minimalFeaturePValue = 1, topMode = False, debugMode = False):
+def minimal_qtl_processing(QTL_Dir, OutputDir, writeToOneFile=True, compressed = False, overWrite=True, minimalPValue = 1, minimalFeaturePValue = 1, topMode = False, addNTestPerFeature = False, debugMode = False):
     qtl_results_file='qtl_results_'
     snp_metadata_file='snp_metadata_'
     feature_metadata_file='feature_metadata_'
@@ -127,6 +127,11 @@ def minimal_qtl_processing(QTL_Dir, OutputDir, writeToOneFile=True, compressed =
             temp=pd.DataFrame(data).iloc[data['empirical_feature_p_value'].astype(float)<minimalFeaturePValue]
 
         temp = temp.sort_values(by =['empirical_feature_p_value',"p_value"], ascending=[True,True])
+        if addNTestPerFeature:
+            nTestsPerFeat = temp['feature_id'].value_counts()
+            temp['nTotalTestsPerFeat'] = 0
+            for featN in range(nTestsPerFeat.shape[0]):
+                temp.loc[temp['feature_id']==nTestsPerFeat.index[featN],'nTotalTestsPerFeat'] = nTestsPerFeat[featN]
 
         if topMode:
             temp = temp.groupby(temp['feature_id']).first()
@@ -157,6 +162,7 @@ def parse_args():
     parser.add_argument('--minimimal_reporting_p','-mrp', required=False, default=1.0)
     parser.add_argument('--minimal_reporting_featureP', '-mrf', required=False, default=1.0)
     parser.add_argument('--top_feature_based', '-tfb', action="store_true", required=False, default=False)
+    parser.add_argument('--add_test_per_feature', '-atpf', action="store_true", required=False, default=False)
     parser.add_argument('--debug', '-d', action="store_true", required=False, default=False)
     args = parser.parse_args()
     return args
@@ -171,6 +177,6 @@ if __name__=='__main__':
     minimalPValue = args.minimimal_reporting_p
     minimalFeaturePValue = args.minimal_reporting_featureP
     topMode = args.top_feature_based
+    addTestsPerFeat = args.add_test_per_feature
     debugMode = args.debug
-
-    minimal_qtl_processing(inputDir, outputDir, writeToOneFile, compressed, overWrite, float(minimalPValue), float(minimalFeaturePValue),topMode, debugMode)
+    minimal_qtl_processing(inputDir, outputDir, writeToOneFile, compressed, overWrite, float(minimalPValue), float(minimalFeaturePValue),topMode, addTestsPerFeat, debugMode)
