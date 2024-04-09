@@ -187,6 +187,7 @@ def run_QTL_analysis_load_intersect_phenotype_covariates_kinship_sample_mapping(
     if feature_filter_df is not None:
         lst3 = list(set(phenotype_df.index.values).intersection(feature_filter_df.index.values))
         phenotype_df = phenotype_df.loc[lst3,:]
+        feature_filter_df = feature_filter_df.loc[feature_filter_df.index.isin(lst3),:]
         ##Filtering on features to test.
     if snp_feature_filter_df is not None:
         lst3 = list(set(phenotype_df.index).intersection(np.unique(snp_feature_filter_df['feature_id'])))
@@ -206,6 +207,7 @@ def run_QTL_analysis_load_intersect_phenotype_covariates_kinship_sample_mapping(
     if snp_filter_df is not None:
         toSelect = set(snp_filter_df.index).intersection(set(bim['snp']))
         bim = bim.loc[bim['snp'].isin(toSelect)]
+        snp_filter_df = snp_filter_df.loc[snp_filter_df.index.isin(toSelect),:]
         ##Filtering on SNPs to test from the snp filter.
 
     if snp_feature_filter_df is not None:
