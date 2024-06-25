@@ -91,7 +91,7 @@ def minimal_qtl_processing(QTL_Dir, OutputDir, writeToOneFile=True, compressed =
 
         for key in data.keys():
             data[key]=np.hstack(data[key])
-
+        #pdb.set_trace()
         temp=pd.DataFrame(data)
 
         temp = pd.merge(temp, ffea, on='feature_id', how='left')
@@ -132,7 +132,6 @@ def minimal_qtl_processing(QTL_Dir, OutputDir, writeToOneFile=True, compressed =
             temp['nTotalTestsPerFeat'] = 0
             for featN in range(nTestsPerFeat.shape[0]):
                 temp.loc[temp['feature_id']==nTestsPerFeat.index[featN],'nTotalTestsPerFeat'] = nTestsPerFeat[featN]
-
         if topMode:
             temp = temp.groupby(temp['feature_id']).first()
             temp['feature_id'] = temp.index

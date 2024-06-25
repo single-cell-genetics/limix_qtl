@@ -7,6 +7,7 @@ import os
 import gc
 import pdb
 import sys
+import pickle
 ##External packages.
 import pandas as pd
 import numpy as np
@@ -116,8 +117,8 @@ def run_PrsQtl_analysis(pheno_filename, anno_filename, prsFile, output_dir, min_
         gc.collect()
         snpQcInfo = None
         currentFeatureNumber+= 1
-        if (len(phenotype_df.loc[feature_id,:]))<minimum_test_samples:
-            print("Feature: "+feature_id+" not tested not enough samples do QTL test (n="+str(len(phenotype_df.loc[feature_id,:]))+").")
+        if sum(~np.isnan(phenotype_df.loc[feature_id,:])) <minimum_test_samples:
+            print("Feature: "+feature_id+" not tested not enough samples do QTL test (n="+str(sum(~np.isnan(phenotype_df.loc[feature_id,:])))+").")")
             fail_qc_features.append(feature_id)
             geneticaly_unique_individuals = tmp_unique_individuals
             continue

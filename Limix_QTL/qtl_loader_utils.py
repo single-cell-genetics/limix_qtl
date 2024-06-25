@@ -32,12 +32,18 @@ def get_randeff_df(randomeff_filename):
         kinship_df = pd.read_csv(kinship_filename,sep='\t',index_col=0)
         kinship_df.index = kinship_df.index.astype(str)
         kinship_df.columns = kinship_df.columns.astype(str)
+        if len(np.unique(kinship_df.index)) != len(kinship_df.index):
+            print("Error, indeces of the kinship matrix contain non-unique sample IDs.")
+            sys.exit(0)
     else:
         kinship_df = None
     if readdepth_filename:
         readdepth_df = pd.read_csv(readdepth_filename,sep='\t',index_col=0)
         readdepth_df.index = readdepth_df.index.astype(str)
         readdepth_df.columns = readdepth_df.columns.astype(str)
+        if len(np.unique(readdepth_df.index)) != len(readdepth_df.index):
+            print("Error, indeces of the kinship matrix contain non-unique sample IDs.")
+            sys.exit(0)
     else:
         readdepth_df = None
     return kinship_df,readdepth_df
