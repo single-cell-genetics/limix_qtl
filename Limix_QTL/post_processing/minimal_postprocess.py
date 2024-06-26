@@ -113,7 +113,7 @@ def minimal_qtl_processing(QTL_Dir, OutputDir, writeToOneFile=True, compressed =
                     temp2 = pd.concat([temp2,temp_t])
                 data[key]=np.zeros(len(np.unique(list(frezkeys))),dtype='object')+np.nan
             temp = temp2
-            temp2 = None
+            del temp2
         elif(os.path.exists(QTL_Dir+'na_snp_qc_metrics_features_'+partTmp+'.pkl')):
             naQcInfo = None
             with open(QTL_Dir+'na_snp_qc_metrics_features_'+partTmp+'.pkl', 'rb') as f:
@@ -132,6 +132,7 @@ def minimal_qtl_processing(QTL_Dir, OutputDir, writeToOneFile=True, compressed =
                     temp_t = pd.merge(temp_t, fsnp, on='snp_id', how='left')
                     temp2 = pd.concat([temp2,temp_t])
                 data[key]=np.zeros(len(np.unique(list(frezkeys))),dtype='object')+np.nan
+            del temp2
         else :
             temp = pd.merge(temp, fsnp, on='snp_id', how='left')
 
