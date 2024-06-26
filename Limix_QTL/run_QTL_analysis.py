@@ -7,6 +7,7 @@ import os
 import gc
 import pdb
 import sys
+import pickle
 ##External packages.
 import pandas as pd
 import numpy as np
@@ -110,12 +111,14 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
     na_containing_features=0
     currentFeatureNumber=0
     snpQcInfoMain = None
+    snpQcInfoNaContaining = {}
     random_eff_param = []
     log = {}
     Sigma = {}
     Sigma_qs = {}
     randomeff_mix = False
-    
+    ##Back up when there are missing samples.
+    tmp_unique_individuals = geneticaly_unique_individuals
     minRho = 0.1
     #minRho = 0
     maxRho = 0.9
@@ -155,7 +158,7 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
         ########################################################################################################################################################
         # check if enough phenotype samples to test this gene
         if sum(~np.isnan(phenotype_df.loc[feature_id,:])) <minimum_test_samples:
-            print("Feature: "+feature_id+" not tested not enough samples do QTL test (n="+str(sum(~np.isnan(phenotype_df.loc[feature_id,:])) )+").")
+            print("Feature: "+feature_id+" not tested not enough samples do QTL test (n="+str(sum(~np.isnan(phenotype_df.loc[feature_id,:])))+").")")
             fail_qc_features.append(feature_id)
             geneticaly_unique_individuals = tmp_unique_individuals
             continue
@@ -692,10 +695,10 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
             QS = None
             Sigma_qs = None
             geneticaly_unique_individuals = tmp_unique_individuals
-            del tmp_unique_individuals
             if snpQcInfo is not None:
                 snpQcInfo.index.name = "snp_id"
-                snpQcInfo.to_csv(output_dir+'/snp_qc_metrics_naContaining_feature_{}.txt'.format(feature_id.replace("/","-")),sep='\t')
+                snpQcInfoNaContaining[feature_id] = snpQcInfo
+                ## snpQcInfo.to_csv(output_dir+'/snp_qc_metrics_naContaining_feature_{}.txt'.format(feature_id.replace("/","-")),sep='\t')
         else:
             if (snpQcInfo is not None and snpQcInfoMain is not None):
                 snpQcInfoMain = pd.concat([snpQcInfoMain, snpQcInfo], axis=0, sort=False)
@@ -717,7 +720,9 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
         log[(feature_id)].append(tot_time/idx)
 
     output_writer.close()
-
+    if(len(snpQcInfoNaContaining)!=0):
+        with open(output_dir+'na_snp_qc_metrics_features_{}_{}_{}.pkl'.format(chromosome,selectionStart,selectionEnd), "wb") as file:
+            pickle.dump(snpQcInfoNaContaining, file)
     if(write_permutations):
         permutation_writer.close()
     fail_qc_features = np.unique(fail_qc_features)

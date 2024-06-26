@@ -6,6 +6,7 @@ import pandas as pd
 import argparse
 import glob
 import pdb
+import pickle
 from pathlib import Path
 
 def minimal_qtl_processing(QTL_Dir, OutputDir, writeToOneFile=True, compressed = False, overWrite=True, minimalPValue = 1, minimalFeaturePValue = 1, topMode = False, addNTestPerFeature = False, debugMode = False):
@@ -91,11 +92,10 @@ def minimal_qtl_processing(QTL_Dir, OutputDir, writeToOneFile=True, compressed =
 
         for key in data.keys():
             data[key]=np.hstack(data[key])
-
+        #pdb.set_trace()
         temp=pd.DataFrame(data)
 
         temp = pd.merge(temp, ffea, on='feature_id', how='left')
-
         if(len(glob.glob(QTL_Dir+'snp_qc_metrics_naContaining_feature_*.txt*'))>0):
             ##Here we need to check, we can based on the output of glob do this quicker.
             temp2 = pd.DataFrame(columns=temp.columns)
@@ -106,14 +106,33 @@ def minimal_qtl_processing(QTL_Dir, OutputDir, writeToOneFile=True, compressed =
                     fsnp_t = fsnp.loc[:,["snp_id","snp_chromosome","snp_position","assessed_allele"]]
                     fsnp_t = pd.merge(fsnp_t, fsnp_rel, on='snp_id', how='right')
                     temp_t = pd.merge(temp_t, fsnp_t, on='snp_id', how='left')
-                    temp2 = temp2.append(temp_t,sort=False)
+                    temp2 = pd.concat([temp2,temp_t])
                 else:
                     temp_t = temp.loc[temp["feature_id"]==key]
                     temp_t = pd.merge(temp_t, fsnp, on='snp_id', how='left')
-                    temp2 = temp2.append(temp_t,sort=False)
+                    temp2 = pd.concat([temp2,temp_t])
                 data[key]=np.zeros(len(np.unique(list(frezkeys))),dtype='object')+np.nan
             temp = temp2
-            temp2 = None
+            del temp2
+        elif(os.path.exists(QTL_Dir+'na_snp_qc_metrics_features_'+partTmp+'.pkl')):
+            naQcInfo = None
+            with open(QTL_Dir+'na_snp_qc_metrics_features_'+partTmp+'.pkl', 'rb') as f:
+                naQcInfo = pickle.load(f)
+            
+            temp2 = pd.DataFrame(columns=temp.columns)
+            for key in frezkeys:
+                if key in naQcInfo.keys():
+                    temp_t = temp.loc[temp["feature_id"]==key]
+                    fsnp_t = fsnp.loc[:,["snp_id","snp_chromosome","snp_position","assessed_allele"]]
+                    fsnp_t = pd.merge(fsnp_t, naQcInfo[key], on='snp_id', how='right')
+                    temp_t = pd.merge(temp_t, fsnp_t, on='snp_id', how='left')
+                    temp2 = pd.concat([temp2,temp_t])
+                else:
+                    temp_t = temp.loc[temp["feature_id"]==key]
+                    temp_t = pd.merge(temp_t, fsnp, on='snp_id', how='left')
+                    temp2 = pd.concat([temp2,temp_t])
+                data[key]=np.zeros(len(np.unique(list(frezkeys))),dtype='object')+np.nan
+            del temp2
         else :
             temp = pd.merge(temp, fsnp, on='snp_id', how='left')
 
@@ -132,7 +151,6 @@ def minimal_qtl_processing(QTL_Dir, OutputDir, writeToOneFile=True, compressed =
             temp['nTotalTestsPerFeat'] = 0
             for featN in range(nTestsPerFeat.shape[0]):
                 temp.loc[temp['feature_id']==nTestsPerFeat.index[featN],'nTotalTestsPerFeat'] = nTestsPerFeat[featN]
-
         if topMode:
             temp = temp.groupby(temp['feature_id']).first()
             temp['feature_id'] = temp.index

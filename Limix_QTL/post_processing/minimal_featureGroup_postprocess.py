@@ -7,6 +7,8 @@ import argparse
 import glob
 import pdb
 import qtl_fdr_utilities
+import pickle
+from pathlib import Path
 
 #writeToOneFile=True; compressed = False; overWrite=True; minimalPValue = 1; minimalFeaturePValue = 1; topMode = False; debugMode = False
 #QTL_Dir = "./"; OutputDir = "./"; featureGroupFile="./featureGrouping.txt"
@@ -125,7 +127,27 @@ def minimal_qtl_processing(QTL_Dir, OutputDir, featureGroupFile, cis_mode, write
                     temp2 = temp2.append(temp_t,sort=False)
                 data[key]=np.zeros(len(np.unique(list(frezkeys))),dtype='object')+np.nan
             data = temp2
-            temp2 = None
+            del temp2
+        elif(os.path.exists(QTL_Dir+'na_snp_qc_metrics_features_'+partTmp+'.pkl')):
+            naQcInfo = None
+            with open(QTL_Dir+'na_snp_qc_metrics_features_'+partTmp+'.pkl', 'rb') as f:
+                naQcInfo = pickle.load(f)
+            
+            temp2 = pd.DataFrame(columns=temp.columns)
+            for key in frezkeys:
+                if key in naQcInfo.keys():
+                    temp_t = temp.loc[temp["feature_id"]==key]
+                    fsnp_t = fsnp.loc[:,["snp_id","snp_chromosome","snp_position","assessed_allele"]]
+                    fsnp_t = pd.merge(fsnp_t, naQcInfo[key], on='snp_id', how='right')
+                    temp_t = pd.merge(temp_t, fsnp_t, on='snp_id', how='left')
+                    temp2 = pd.concat([temp2,temp_t])
+                else:
+                    temp_t = temp.loc[temp["feature_id"]==key]
+                    temp_t = pd.merge(temp_t, fsnp, on='snp_id', how='left')
+                    temp2 = pd.concat([temp2,temp_t])
+                data[key]=np.zeros(len(np.unique(list(frezkeys))),dtype='object')+np.nan
+            del temp2
+            del naQcInfo
         else :
             data = pd.merge(data, fsnp, on='snp_id', how='left')
         
