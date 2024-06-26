@@ -672,7 +672,6 @@ def run_QTL_analysis(pheno_filename, anno_filename, geno_prefix, plinkGenotype, 
             QS = None
             Sigma_qs = None
             geneticaly_unique_individuals = tmp_unique_individuals
-            del tmp_unique_individuals
             if snpQcInfo is not None:
                 snpQcInfo.index.name = "snp_id"
                 snpQcInfoNaContaining[feature_id] = snpQcInfo
