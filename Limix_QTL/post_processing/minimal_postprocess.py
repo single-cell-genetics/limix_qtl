@@ -132,7 +132,9 @@ def minimal_qtl_processing(QTL_Dir, OutputDir, writeToOneFile=True, compressed =
                     temp_t = pd.merge(temp_t, fsnp, on='snp_id', how='left')
                     temp2 = pd.concat([temp2,temp_t])
                 data[key]=np.zeros(len(np.unique(list(frezkeys))),dtype='object')+np.nan
+            temp = temp2
             del temp2
+            del temp_t
         else :
             temp = pd.merge(temp, fsnp, on='snp_id', how='left')
 
@@ -168,7 +170,11 @@ def minimal_qtl_processing(QTL_Dir, OutputDir, writeToOneFile=True, compressed =
         wroteData = True
     
     if writeToOneFile and not wroteData:
-        Path(OutputDir+output_file+"all.txt").touch()
+        if(compressed):
+            Path(OutputDir+output_file+"all.txt.gz").touch()
+        else:
+            Path(OutputDir+output_file+"all.txt").touch()
+
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Run QTL analysis given genotype, phenotype, and annotation.')

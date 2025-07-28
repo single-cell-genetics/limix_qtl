@@ -216,7 +216,10 @@ def minimal_iqtl_processing(QTL_Dir, OutputDir, writeToOneFile=True, compressed 
         wroteData = True
     
     if writeToOneFile and not wroteData:
-        Path(OutputDir+output_file+"all.txt").touch()
+        if(compressed):
+            Path(OutputDir+output_file+"all.txt.gz").touch()
+        else:
+            Path(OutputDir+output_file+"all.txt").touch()
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Process the h5 and annoation files to flat files after ieQTL mapping.')
