@@ -7,9 +7,10 @@ import argparse
 import glob
 import pdb
 import pickle
+import scipy.stats as sps
 from pathlib import Path
 
-def minimal_qtl_processing(QTL_Dir, OutputDir, writeToOneFile=True, compressed = False, overWrite=True, minimalPValue = 1, minimalFeaturePValue = 1, topMode = False, addNTestPerFeature = False, debugMode = False):
+def minimal_qtl_processing(QTL_Dir, OutputDir, writeToOneFile=True, compressed = False, overWrite=True, minimalPValue = 1, minimalFeaturePValue = 1, topMode = False, addAcatPvalue = False, debugMode = False):
     qtl_results_file='qtl_results_'
     snp_metadata_file='snp_metadata_'
     feature_metadata_file='feature_metadata_'
@@ -148,12 +149,20 @@ def minimal_qtl_processing(QTL_Dir, OutputDir, writeToOneFile=True, compressed =
             temp=pd.DataFrame(data).iloc[data['empirical_feature_p_value'].astype(float)<minimalFeaturePValue]
 
         temp = temp.sort_values(by =['empirical_feature_p_value',"p_value"], ascending=[True,True])
-        if addNTestPerFeature:
-            nTestsPerFeat = temp['feature_id'].value_counts()
-            temp['nTotalTestsPerFeat'] = 0
-            for featN in range(nTestsPerFeat.shape[0]):
-                temp.loc[temp['feature_id']==nTestsPerFeat.index[featN],'nTotalTestsPerFeat'] = nTestsPerFeat[featN]
+        
+        if addAcatPvalue:
+            grouped = temp.groupby(temp['feature_id'])
+            
+            acat_pvals = {}
+            for gene_id in temp['feature_id'].unique():
+              acat_pvals[gene_id] = acat_test(grouped.get_group(gene_id)["p_value"])
+            
+            temp['ACAT_p_value'] = temp['feature_id'].map(acat_pvals)
         if topMode:
+            ## to fix in a second pass.
+            nTestsPerFeat = temp['feature_id'].value_counts()
+            temp['nTotalVariantsPerFeat'] = temp['feature_id'].map(nTestsPerFeat)
+            
             temp = temp.groupby(temp['feature_id']).first()
             temp['feature_id'] = temp.index
         #print(outputFile)#
@@ -175,7 +184,73 @@ def minimal_qtl_processing(QTL_Dir, OutputDir, writeToOneFile=True, compressed =
         else:
             Path(OutputDir+output_file+"all.txt").touch()
 
-
+### ACAT function
+def acat_test(pvalues,weights=None):
+    '''acat_test()
+    Aggregated Cauchy Assocaition Test
+    A p-value combination method using the Cauchy distribution.
+    
+    Inspired by: https://github.com/yaowuliu/ACAT/blob/master/R/ACAT.R
+    
+    Author: Ryan Neff
+    
+    Inputs:
+        pvalues: <list or numpy array>
+            The p-values you want to combine.
+        weights: <list or numpy array>, default=None
+            The weights for each of the p-values. If None, equal weights are used.
+    
+    Returns:
+        pval: <float>
+            The ACAT combined p-value.
+    '''
+    if any(np.isnan(pvalues)):
+        raise Exception("Cannot have NAs in the p-values.")
+    if any([(i>1)|(i<0) for i in pvalues]):
+        raise Exception("P-values must be between 0 and 1.")
+    if any([i==1 for i in pvalues])&any([i==0 for i in pvalues]):
+        raise Exception("Cannot have both 0 and 1 p-values.")
+    if any([i==0 for i in pvalues]):
+        print("Warn: p-values are exactly 0.")
+        return 0
+    if any([i==1 for i in pvalues]):
+        print("Warn: p-values are exactly 1.")
+        new_p = 1 - (1/len(pvalues)) # recommended by R version
+        new_pvals = []
+        for pval in pvalues:
+        	if pval > new_p:
+        		new_pvals.append(new_p)
+        	else:
+        		new_pvals.append(pval)
+        pvalues = new_pvals
+        #return 1
+    if weights==None:
+        weights = [1/len(pvalues) for i in pvalues]
+    elif len(weights)!=len(pvalues):
+        raise Exception("Length of weights and p-values differs.")
+    elif any([i<0 for i in weights]):
+        raise Exception("All weights must be positive.")
+    else:
+        weights = [i/len(weights) for i in weights]
+    
+    pvalues = np.array(pvalues)
+    weights = np.array(weights)
+    
+    if any([i<1e-16 for i in pvalues])==False:
+        cct_stat = sum(weights*np.tan((0.5-pvalues)*np.pi))
+    else:
+        is_small = [i<(1e-16) for i in pvalues]
+        is_large = [i>=(1e-16) for i in pvalues]
+        cct_stat = sum((weights[is_small]/pvalues[is_small])/np.pi)
+        cct_stat += sum(weights[is_large]*np.tan((0.5-pvalues[is_large])*np.pi))
+    
+    if cct_stat>1e15:
+        pval = (1/cct_stat)/np.pi
+    else:
+        pval = 1 - sps.cauchy.cdf(cct_stat)
+    
+    return pval
+    
 def parse_args():
     parser = argparse.ArgumentParser(description='Run QTL analysis given genotype, phenotype, and annotation.')
     parser.add_argument('--input_dir','-id',required=True)
@@ -186,7 +261,7 @@ def parse_args():
     parser.add_argument('--minimimal_reporting_p','-mrp', required=False, default=1.0)
     parser.add_argument('--minimal_reporting_featureP', '-mrf', required=False, default=1.0)
     parser.add_argument('--top_feature_based', '-tfb', action="store_true", required=False, default=False)
-    parser.add_argument('--add_test_per_feature', '-atpf', action="store_true", required=False, default=False)
+    parser.add_argument('--add_acat_p', '-aap', action="store_true", required=False, default=False)
     parser.add_argument('--debug', '-d', action="store_true", required=False, default=False)
     args = parser.parse_args()
     return args
@@ -201,6 +276,10 @@ if __name__=='__main__':
     minimalPValue = args.minimimal_reporting_p
     minimalFeaturePValue = args.minimal_reporting_featureP
     topMode = args.top_feature_based
-    addTestsPerFeat = args.add_test_per_feature
+    addAcatPvalue = args.add_acat_p
     debugMode = args.debug
-    minimal_qtl_processing(inputDir, outputDir, writeToOneFile, compressed, overWrite, float(minimalPValue), float(minimalFeaturePValue),topMode, addTestsPerFeat, debugMode)
+    
+    if addAcatPvalue and not topMode :
+        print("Warning: ACAT p values are only defined per locus. Repeating ACAT p value per SNP.")
+    
+    minimal_qtl_processing(inputDir, outputDir, writeToOneFile, compressed, overWrite, float(minimalPValue), float(minimalFeaturePValue),topMode, addAcatPvalue, debugMode)
